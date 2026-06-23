@@ -1,7 +1,7 @@
 using PKHeX.Core;
 using PKHeX.Drawing.Misc.Properties;
 using System;
-using System.Drawing;
+using SkiaSharp;
 
 namespace PKHeX.Drawing.Misc;
 
@@ -14,13 +14,13 @@ public static class DonutSpriteUtil
     /// Gets the sprite image for the specified <see cref="Donut9a"/>.
     /// </summary>
     /// <param name="donut">The donut to get the sprite for.</param>
-    /// <returns>A <see cref="Bitmap"/> representing the sprite image.</returns>
-    public static Bitmap? Sprite(this Donut9a donut) => GetDonutImage(donut);
-    public static Bitmap? StarSprite => (Bitmap?)Resources.ResourceManager.GetObject("star");
-    public static Bitmap? GetDonutFlavorImage(string donut) => (Bitmap?)Resources.ResourceManager.GetObject(donut);
-    public static Bitmap? GetFlavorProfileImage() => (Bitmap?)Resources.ResourceManager.GetObject("flavorprofile");
+    /// <returns>A <see cref="SKBitmap"/> representing the sprite image.</returns>
+    public static SKBitmap? Sprite(this Donut9a donut) => GetDonutImage(donut);
+    public static SKBitmap? StarSprite => (SKBitmap?)Resources.ResourceManager.GetObject("star");
+    public static SKBitmap? GetDonutFlavorImage(string donut) => (SKBitmap?)Resources.ResourceManager.GetObject(donut);
+    public static SKBitmap? GetFlavorProfileImage() => (SKBitmap?)Resources.ResourceManager.GetObject("flavorprofile");
 
-    private static Bitmap? GetDonutImage(Donut9a donut)
+    private static SKBitmap? GetDonutImage(Donut9a donut)
     {
         if (donut.Donut is >= 198 and <= 202)
             return GetSpecialDonutImage(donut);
@@ -30,10 +30,10 @@ public static class DonutSpriteUtil
         var stars = donut.Stars;
         var flavor = flavors[variant];
         var resource = $"donut_{flavor}{stars:00}";
-        return (Bitmap?)Resources.ResourceManager.GetObject(resource);
+        return (SKBitmap?)Resources.ResourceManager.GetObject(resource);
     }
 
-    private static Bitmap? GetSpecialDonutImage(Donut9a donut) => donut.Donut switch
+    private static SKBitmap? GetSpecialDonutImage(Donut9a donut) => donut.Donut switch
     {
         198 => Resources.donut_uni491, // Bad Dreams Cruller
         199 => Resources.donut_uni383, // Omega Old-Fashioned Donut

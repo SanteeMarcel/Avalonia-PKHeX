@@ -1,0 +1,94 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PKHeX.Avalonia.MainWindow"
+        Width="900" Height="720"
+        Title="PKHeX — Avalonia preview">
+  <Grid Margin="8" RowDefinitions="Auto,*,Auto" ColumnDefinitions="220,*">
+
+    <!-- Top bar (spans both columns) -->
+    <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+      <TextBox x:Name="PathBox" Width="460"
+               PlaceholderText="Paste a save file path here, then click Load"/>
+      <Button x:Name="LoadButton" Content="Load"/>
+    </StackPanel>
+
+    <!-- Trainer sidebar -->
+    <Border Grid.Row="1" Grid.Column="0" Margin="0,0,8,0" Padding="12"
+            Background="#22808080" CornerRadius="6">
+      <StackPanel Spacing="6">
+        <Image x:Name="TrainerSprite" Width="64" Height="64" Stretch="Uniform"
+               HorizontalAlignment="Center"/>
+        <TextBlock Text="Trainer" FontWeight="Bold" HorizontalAlignment="Center"/>
+        <Separator/>
+        <TextBlock x:Name="OtText"     Text="OT: —"/>
+        <TextBlock x:Name="GenderText" Text="Gender: —"/>
+        <TextBlock x:Name="IdText"     Text="ID: —"/>
+        <TextBlock x:Name="GameText"   Text="Game: —"/>
+        <TextBlock x:Name="MoneyText"  Text="Money: —"/>
+        <TextBlock x:Name="TimeText"   Text="Play time: —"/>
+        <Separator/>
+        <TextBlock x:Name="StatusText" Text="No save loaded" TextWrapping="Wrap" Opacity="0.8"/>
+      </StackPanel>
+    </Border>
+
+    <!-- Box area -->
+    <DockPanel Grid.Row="1" Grid.Column="1">
+      <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,6">
+        <Button x:Name="PrevButton" Content="◀"/>
+        <TextBlock x:Name="BoxLabel" VerticalAlignment="Center" MinWidth="200"
+                   TextAlignment="Center" FontWeight="SemiBold"/>
+        <Button x:Name="NextButton" Content="▶"/>
+      </StackPanel>
+      <Border CornerRadius="6" ClipToBounds="True">
+        <Grid>
+          <Image x:Name="Wallpaper" Stretch="UniformToFill" Opacity="0.55"/>
+          <ScrollViewer>
+            <ItemsControl x:Name="BoxGrid">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <UniformGrid Columns="6"/>
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border Margin="4" Padding="2" Width="86" Height="96"
+                          Background="#33000000" CornerRadius="4">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                      <Image Source="{Binding Image}" Width="68" Height="56" Stretch="Uniform"/>
+                      <TextBlock Text="{Binding Label}" FontSize="11"
+                                 TextAlignment="Center" TextWrapping="Wrap"/>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Grid>
+      </Border>
+    </DockPanel>
+
+    <!-- Party row (spans both columns) -->
+    <Border Grid.Row="2" Grid.ColumnSpan="2" Margin="0,8,0,0" Padding="8"
+            Background="#22808080" CornerRadius="6">
+      <StackPanel Spacing="4">
+        <TextBlock Text="Party" FontWeight="Bold"/>
+        <ItemsControl x:Name="PartyGrid">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <UniformGrid Rows="1" Columns="6"/>
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <StackPanel HorizontalAlignment="Center" Margin="2">
+                <Image Source="{Binding Image}" Width="64" Height="52" Stretch="Uniform"/>
+                <TextBlock Text="{Binding Label}" FontSize="11" TextAlignment="Center"/>
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </Border>
+
+  </Grid>
+</Window>

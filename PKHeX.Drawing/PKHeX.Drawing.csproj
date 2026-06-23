@@ -1,12 +1,18 @@
+<!-- Phase 1 scaffold — proposed PKHeX.Drawing.csproj.
+     Changes vs. original: net10.0-windows -> net10.0; drop System.Drawing.Common; add SkiaSharp. -->
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>PKHeX.Drawing</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.Drawing.Common" Version="10.0.1" />
+    <!-- Must match the SkiaSharp version Avalonia 12 resolves (single version across the whole
+         solution) to avoid a mixed-version native crash. -->
+    <PackageReference Include="SkiaSharp" Version="3.119.3-preview.1.1" />
+    <!-- On headless Linux/CI you also need the native asset: -->
+    <!-- <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.3-preview.1.1" /> -->
   </ItemGroup>
 
 </Project>

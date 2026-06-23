@@ -1,0 +1,29 @@
+<!-- Phase 1 scaffold — proposed PKHeX.Drawing.PokeSprite.csproj. net10.0-windows -> net10.0. -->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>PKHeX.Drawing.PokeSprite</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Resources.Extensions" Version="10.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PKHeX.Core\PKHeX.Core.csproj" />
+    <ProjectReference Include="..\PKHeX.Drawing\PKHeX.Drawing.csproj" />
+  </ItemGroup>
+
+  <!-- Resources: the old Resources.resx (6,411 ResXFileRef -> System.Drawing.Bitmap) and its
+       generated Resources.Designer.cs are REPLACED by:
+         * the hand-written Properties/Resources.cs facade (PokeSprite.Resources.cs in this folder)
+         * the PNGs embedded by logical name below (basenames are globally unique, so no collisions)
+       Delete Properties\Resources.resx and Properties\Resources.Designer.cs when applying. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\img\**\*.png">
+      <LogicalName>%(Filename).png</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>

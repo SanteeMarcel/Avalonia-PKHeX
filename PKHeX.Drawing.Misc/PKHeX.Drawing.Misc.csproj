@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>PKHeX.Drawing.Misc</RootNamespace>
   </PropertyGroup>
 
@@ -13,22 +13,25 @@
 
   <ItemGroup>
     <PackageReference Include="QRCoder" Version="1.7.0" />
-    <PackageReference Include="System.Resources.Extensions" Version="10.0.1" />
+    <PackageReference Include="SkiaSharp" Version="3.119.3-preview.1.1" />
   </ItemGroup>
 
+  <!-- Sprites: embed the PNGs by logical name (unique basenames); decoded to SKBitmap by the
+       hand-written Properties/Resources.cs facade. Old Resources.resx + Resources.Designer.cs
+       are deleted. -->
   <ItemGroup>
-    <Compile Update="Properties\Resources.Designer.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Resources.resx</DependentUpon>
-    </Compile>
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Update="Properties\Resources.resx">
-      <Generator>PublicResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    <EmbeddedResource Include="Resources\img\**\*.png">
+      <LogicalName>%(Filename).png</LogicalName>
     </EmbeddedResource>
+  </ItemGroup>
+
+  <!-- Old generated resources are superseded by Properties\Resources.cs. Exclude them so the
+       SDK's default globs don't compile the old Designer (duplicate class) or embed the old
+       .resx (which references System.Drawing.Bitmap). Files can be deleted later. -->
+  <ItemGroup>
+    <Compile Remove="Properties\Resources.Designer.cs" />
+    <EmbeddedResource Remove="Properties\Resources.resx" />
+    <None Include="Properties\Resources.Designer.cs;Properties\Resources.resx" />
   </ItemGroup>
 
 </Project>
