@@ -1,110 +1,24 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:PKHeX.Avalonia"
         x:Class="PKHeX.Avalonia.MainWindow"
-        Width="1140" Height="740"
-        Title="PKHeX — Avalonia preview">
-  <Grid Margin="8" RowDefinitions="Auto,*,Auto" ColumnDefinitions="220,*,300">
+        Width="1180" Height="720"
+        Title="PKHeX — Avalonia preview (two-save transfer + edit)">
+  <Grid Margin="8" ColumnDefinitions="*,Auto,*">
 
-    <!-- Top bar -->
-    <StackPanel Grid.Row="0" Grid.ColumnSpan="3" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
-      <TextBox x:Name="PathBox" Width="560"
-               PlaceholderText="Paste a save file path here, then click Load"/>
-      <Button x:Name="LoadButton" Content="Load"/>
+    <local:SavePanel x:Name="LeftPanel" Grid.Column="0" Margin="0,0,6,0"/>
+
+    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="10" Margin="6,0">
+      <TextBlock Text="Transfer" FontWeight="Bold" HorizontalAlignment="Center"/>
+      <Button x:Name="MoveRightButton" Content="Send  ▶" HorizontalAlignment="Stretch"/>
+      <Button x:Name="MoveLeftButton"  Content="◀  Send" HorizontalAlignment="Stretch"/>
+      <CheckBox x:Name="RemoveSourceCheck" Content="Remove from source"/>
+      <Border Height="1" Background="#33808080"/>
+      <TextBlock x:Name="MoveStatus" Width="150" TextWrapping="Wrap" FontSize="11" Opacity="0.85"
+                 Text="Load a save on each side, select a Pokémon, then Send. Double-click a slot to edit it."/>
     </StackPanel>
 
-    <!-- Trainer sidebar -->
-    <Border Grid.Row="1" Grid.Column="0" Margin="0,0,8,0" Padding="12"
-            Background="#22808080" CornerRadius="6">
-      <StackPanel Spacing="6">
-        <Image x:Name="TrainerSprite" Width="64" Height="64" Stretch="Uniform" HorizontalAlignment="Center"/>
-        <TextBlock Text="Trainer" FontWeight="Bold" HorizontalAlignment="Center"/>
-        <Separator/>
-        <TextBlock x:Name="OtText"     Text="OT: —"/>
-        <TextBlock x:Name="GenderText" Text="Gender: —"/>
-        <TextBlock x:Name="IdText"     Text="ID: —"/>
-        <TextBlock x:Name="GameText"   Text="Game: —"/>
-        <TextBlock x:Name="MoneyText"  Text="Money: —"/>
-        <TextBlock x:Name="TimeText"   Text="Play time: —"/>
-        <Separator/>
-        <TextBlock x:Name="StatusText" Text="No save loaded" TextWrapping="Wrap" Opacity="0.8"/>
-      </StackPanel>
-    </Border>
-
-    <!-- Box area -->
-    <DockPanel Grid.Row="1" Grid.Column="1" Margin="0,0,8,0">
-      <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,6">
-        <Button x:Name="PrevButton" Content="◀"/>
-        <TextBlock x:Name="BoxLabel" VerticalAlignment="Center" MinWidth="200" TextAlignment="Center" FontWeight="SemiBold"/>
-        <Button x:Name="NextButton" Content="▶"/>
-      </StackPanel>
-      <Border CornerRadius="6" ClipToBounds="True">
-        <Grid>
-          <Image x:Name="Wallpaper" Stretch="UniformToFill" Opacity="0.55"/>
-          <ScrollViewer>
-            <ItemsControl x:Name="BoxGrid">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><UniformGrid Columns="6"/></ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                  <Button Padding="0" Margin="2" Background="Transparent" BorderThickness="0" Cursor="Hand">
-                    <Border Width="86" Height="96" Background="#33000000" CornerRadius="4">
-                      <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <Image Source="{Binding Image}" Width="68" Height="56" Stretch="Uniform"/>
-                        <TextBlock Text="{Binding Label}" FontSize="11" TextAlignment="Center" TextWrapping="Wrap"/>
-                      </StackPanel>
-                    </Border>
-                  </Button>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </ScrollViewer>
-        </Grid>
-      </Border>
-    </DockPanel>
-
-    <!-- Edit panel -->
-    <Border Grid.Row="1" Grid.Column="2" Padding="12" Background="#22808080" CornerRadius="6">
-      <StackPanel Spacing="8">
-        <TextBlock Text="Edit Pokémon" FontWeight="Bold"/>
-        <Image x:Name="EditSprite" Width="68" Height="56" Stretch="Uniform" HorizontalAlignment="Center"/>
-        <TextBlock x:Name="EditName" Text="—" HorizontalAlignment="Center" FontWeight="SemiBold"/>
-        <Separator/>
-        <TextBlock Text="Nickname"/>
-        <TextBox x:Name="NickBox"/>
-        <TextBlock Text="Level"/>
-        <NumericUpDown x:Name="LevelBox" Minimum="1" Maximum="100" Increment="1" FormatString="0"/>
-        <TextBlock Text="Nature"/>
-        <ComboBox x:Name="NatureBox" HorizontalAlignment="Stretch"/>
-        <Button x:Name="ShinyButton" Content="✨ Make Shiny" HorizontalAlignment="Stretch"/>
-        <Button x:Name="ApplyButton" Content="Apply to slot" HorizontalAlignment="Stretch"/>
-        <Separator/>
-        <TextBlock Text="Save to (output path)"/>
-        <TextBox x:Name="OutPathBox"/>
-        <Button x:Name="SaveButton" Content="💾 Save File" HorizontalAlignment="Stretch"/>
-        <TextBlock x:Name="EditStatus" Text="Click a slot to edit." TextWrapping="Wrap" Opacity="0.8"/>
-      </StackPanel>
-    </Border>
-
-    <!-- Party row -->
-    <Border Grid.Row="2" Grid.ColumnSpan="3" Margin="0,8,0,0" Padding="8" Background="#22808080" CornerRadius="6">
-      <StackPanel Spacing="4">
-        <TextBlock Text="Party" FontWeight="Bold"/>
-        <ItemsControl x:Name="PartyGrid">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate><UniformGrid Rows="1" Columns="6"/></ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
-            <DataTemplate>
-              <StackPanel HorizontalAlignment="Center" Margin="2">
-                <Image Source="{Binding Image}" Width="64" Height="52" Stretch="Uniform"/>
-                <TextBlock Text="{Binding Label}" FontSize="11" TextAlignment="Center"/>
-              </StackPanel>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </StackPanel>
-    </Border>
+    <local:SavePanel x:Name="RightPanel" Grid.Column="2" Margin="6,0,0,0"/>
 
   </Grid>
 </Window>

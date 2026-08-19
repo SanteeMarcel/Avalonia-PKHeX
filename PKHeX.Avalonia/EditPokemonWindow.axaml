@@ -1,0 +1,181 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="PKHeX.Avalonia.EditPokemonWindow"
+        Width="440" Height="760"
+        WindowStartupLocation="CenterOwner"
+        Title="Edit Pokémon">
+  <DockPanel Margin="10">
+
+    <!-- Action bar -->
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8"
+                HorizontalAlignment="Right" Margin="0,8,0,0">
+      <TextBlock x:Name="StatusText" VerticalAlignment="Center" FontSize="11" Opacity="0.8"
+                 TextWrapping="Wrap" MaxWidth="160"/>
+      <Button x:Name="RecheckButton" Content="Re-check"/>
+      <Button x:Name="CancelButton" Content="Cancel"/>
+      <Button x:Name="ApplyButton" Content="Apply to slot"/>
+    </StackPanel>
+
+    <ScrollViewer>
+      <StackPanel Spacing="6">
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <Image x:Name="EditSprite" Width="68" Height="56" Stretch="Uniform"/>
+          <StackPanel VerticalAlignment="Center">
+            <TextBlock x:Name="SpeciesText" FontWeight="Bold" FontSize="14"/>
+            <TextBlock x:Name="LegalityText" FontSize="11" Opacity="0.8"/>
+          </StackPanel>
+        </StackPanel>
+        <Separator/>
+
+        <TextBlock Text="Nickname"/>
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <TextBox x:Name="NickBox" Width="220"/>
+          <CheckBox x:Name="NicknamedCheck" Content="Nicknamed" VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+          <StackPanel Grid.Column="0" Margin="0,0,4,0">
+            <TextBlock Text="Level"/>
+            <NumericUpDown x:Name="LevelBox" Minimum="1" Maximum="100" Increment="1" FormatString="0"/>
+          </StackPanel>
+          <StackPanel Grid.Column="1" Margin="4,0,0,0">
+            <TextBlock Text="Nature"/>
+            <ComboBox x:Name="NatureBox" HorizontalAlignment="Stretch"/>
+          </StackPanel>
+        </Grid>
+
+        <TextBlock Text="Ability"/>
+        <ComboBox x:Name="AbilityBox" HorizontalAlignment="Stretch"/>
+
+        <TextBlock Text="Held item"/>
+        <AutoCompleteBox x:Name="HeldItemBox" FilterMode="Contains" HorizontalAlignment="Stretch"/>
+
+        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+          <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,4,2">
+            <TextBlock Text="Gender"/>
+            <ComboBox x:Name="GenderBox" HorizontalAlignment="Stretch"/>
+          </StackPanel>
+          <StackPanel Grid.Row="0" Grid.Column="1" Margin="4,0,0,2">
+            <TextBlock Text="Form"/>
+            <ComboBox x:Name="FormBox" HorizontalAlignment="Stretch"/>
+          </StackPanel>
+          <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,2,4,0">
+            <TextBlock Text="Ball"/>
+            <ComboBox x:Name="BallBox" HorizontalAlignment="Stretch"/>
+          </StackPanel>
+          <StackPanel Grid.Row="1" Grid.Column="1" Margin="4,2,0,0">
+            <TextBlock Text="Friendship"/>
+            <NumericUpDown x:Name="FriendshipBox" Minimum="0" Maximum="255" Increment="1" FormatString="0"/>
+          </StackPanel>
+        </Grid>
+
+        <Separator/>
+        <Grid ColumnDefinitions="*,110">
+          <TextBlock Grid.Column="0" Text="Moves" FontWeight="SemiBold"/>
+          <TextBlock Grid.Column="1" Text="PP Ups" FontWeight="SemiBold" FontSize="11" VerticalAlignment="Bottom"/>
+        </Grid>
+        <Grid ColumnDefinitions="*,110" Margin="0,1">
+          <AutoCompleteBox Grid.Column="0" x:Name="Move1Box" FilterMode="Contains" HorizontalAlignment="Stretch" Margin="0,0,4,0"/>
+          <NumericUpDown Grid.Column="1" x:Name="Move1Pp" Minimum="0" Maximum="3" Increment="1" FormatString="0"/>
+        </Grid>
+        <Grid ColumnDefinitions="*,110" Margin="0,1">
+          <AutoCompleteBox Grid.Column="0" x:Name="Move2Box" FilterMode="Contains" HorizontalAlignment="Stretch" Margin="0,0,4,0"/>
+          <NumericUpDown Grid.Column="1" x:Name="Move2Pp" Minimum="0" Maximum="3" Increment="1" FormatString="0"/>
+        </Grid>
+        <Grid ColumnDefinitions="*,110" Margin="0,1">
+          <AutoCompleteBox Grid.Column="0" x:Name="Move3Box" FilterMode="Contains" HorizontalAlignment="Stretch" Margin="0,0,4,0"/>
+          <NumericUpDown Grid.Column="1" x:Name="Move3Pp" Minimum="0" Maximum="3" Increment="1" FormatString="0"/>
+        </Grid>
+        <Grid ColumnDefinitions="*,110" Margin="0,1">
+          <AutoCompleteBox Grid.Column="0" x:Name="Move4Box" FilterMode="Contains" HorizontalAlignment="Stretch" Margin="0,0,4,0"/>
+          <NumericUpDown Grid.Column="1" x:Name="Move4Pp" Minimum="0" Maximum="3" Increment="1" FormatString="0"/>
+        </Grid>
+
+        <Separator/>
+        <Grid ColumnDefinitions="60,*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+          <TextBlock Grid.Row="0" Grid.Column="0" Text="Stat" FontWeight="SemiBold" VerticalAlignment="Bottom"/>
+          <TextBlock Grid.Row="0" Grid.Column="1" Text="IV (0-31)" FontWeight="SemiBold" Margin="2,0"/>
+          <TextBlock Grid.Row="0" Grid.Column="2" Text="EV (0-252)" FontWeight="SemiBold" Margin="2,0"/>
+
+          <TextBlock Grid.Row="1" Grid.Column="0" Text="HP"  VerticalAlignment="Center"/>
+          <NumericUpDown Grid.Row="1" Grid.Column="1" x:Name="IvHp"  Minimum="0" Maximum="31"  Margin="2" FormatString="0"/>
+          <NumericUpDown Grid.Row="1" Grid.Column="2" x:Name="EvHp"  Minimum="0" Maximum="252" Margin="2" FormatString="0"/>
+
+          <TextBlock Grid.Row="2" Grid.Column="0" Text="Atk" VerticalAlignment="Center"/>
+          <NumericUpDown Grid.Row="2" Grid.Column="1" x:Name="IvAtk" Minimum="0" Maximum="31"  Margin="2" FormatString="0"/>
+          <NumericUpDown Grid.Row="2" Grid.Column="2" x:Name="EvAtk" Minimum="0" Maximum="252" Margin="2" FormatString="0"/>
+
+          <TextBlock Grid.Row="3" Grid.Column="0" Text="Def" VerticalAlignment="Center"/>
+          <NumericUpDown Grid.Row="3" Grid.Column="1" x:Name="IvDef" Minimum="0" Maximum="31"  Margin="2" FormatString="0"/>
+          <NumericUpDown Grid.Row="3" Grid.Column="2" x:Name="EvDef" Minimum="0" Maximum="252" Margin="2" FormatString="0"/>
+
+          <TextBlock Grid.Row="4" Grid.Column="0" Text="Spe" VerticalAlignment="Center"/>
+          <NumericUpDown Grid.Row="4" Grid.Column="1" x:Name="IvSpe" Minimum="0" Maximum="31"  Margin="2" FormatString="0"/>
+          <NumericUpDown Grid.Row="4" Grid.Column="2" x:Name="EvSpe" Minimum="0" Maximum="252" Margin="2" FormatString="0"/>
+
+          <TextBlock Grid.Row="5" Grid.Column="0" Text="SpA" VerticalAlignment="Center"/>
+          <NumericUpDown Grid.Row="5" Grid.Column="1" x:Name="IvSpa" Minimum="0" Maximum="31"  Margin="2" FormatString="0"/>
+          <NumericUpDown Grid.Row="5" Grid.Column="2" x:Name="EvSpa" Minimum="0" Maximum="252" Margin="2" FormatString="0"/>
+
+          <TextBlock Grid.Row="6" Grid.Column="0" Text="SpD" VerticalAlignment="Center"/>
+          <NumericUpDown Grid.Row="6" Grid.Column="1" x:Name="IvSpd" Minimum="0" Maximum="31"  Margin="2" FormatString="0"/>
+          <NumericUpDown Grid.Row="6" Grid.Column="2" x:Name="EvSpd" Minimum="0" Maximum="252" Margin="2" FormatString="0"/>
+        </Grid>
+
+        <TextBlock Text="PID (hex)"/>
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBox Grid.Column="0" x:Name="PidBox" Margin="0,0,4,0" FontFamily="Menlo,Consolas,monospace"/>
+          <Button Grid.Column="1" x:Name="RerollPidButton" Content="🎲 Reroll"/>
+        </Grid>
+
+        <Button x:Name="ShinyButton" Content="✨ Make Shiny" HorizontalAlignment="Stretch"/>
+
+        <Separator/>
+        <TextBlock Text="Origin / Met data" FontWeight="SemiBold"/>
+        <TextBlock Text="OT (Original Trainer)"/>
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <TextBox x:Name="OtNameBox" Width="220"/>
+          <ComboBox x:Name="OtGenderBox" VerticalAlignment="Center"/>
+        </StackPanel>
+        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+          <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,4,2">
+            <TextBlock Text="TID"/>
+            <NumericUpDown x:Name="TidBox" Minimum="0" Maximum="9999999" Increment="1" FormatString="0"/>
+          </StackPanel>
+          <StackPanel Grid.Row="0" Grid.Column="1" Margin="4,0,0,2">
+            <TextBlock Text="SID"/>
+            <NumericUpDown x:Name="SidBox" Minimum="0" Maximum="9999999" Increment="1" FormatString="0"/>
+          </StackPanel>
+          <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,2,4,0">
+            <TextBlock Text="Met level"/>
+            <NumericUpDown x:Name="MetLevelBox" Minimum="0" Maximum="100" Increment="1" FormatString="0"/>
+          </StackPanel>
+          <StackPanel Grid.Row="1" Grid.Column="1" Margin="4,2,0,0">
+            <TextBlock Text="Met location"/>
+            <ComboBox x:Name="MetLocationBox" HorizontalAlignment="Stretch" MaxDropDownHeight="320"/>
+          </StackPanel>
+        </Grid>
+
+        <TextBlock Text="Met date"/>
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <DatePicker x:Name="MetDateBox" HorizontalAlignment="Left"/>
+          <Button x:Name="ClearMetDateButton" Content="Clear" VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <Separator/>
+        <TextBlock x:Name="MarkingsHeader" Text="Markings" FontWeight="SemiBold"/>
+        <StackPanel x:Name="MarkingsHost"/>
+        <Expander x:Name="RibbonsExpander" Header="Ribbons" Margin="0,4,0,0">
+          <ScrollViewer MaxHeight="260">
+            <StackPanel x:Name="RibbonsHost"/>
+          </ScrollViewer>
+        </Expander>
+
+        <Separator/>
+        <TextBlock Text="Legality" FontWeight="SemiBold"/>
+        <TextBox x:Name="LegalityReport" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap"
+                 MinHeight="80" MaxHeight="160" FontSize="11"/>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</Window>

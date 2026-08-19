@@ -9,10 +9,10 @@
 
   <ItemGroup>
     <!-- Must match the SkiaSharp version Avalonia 12 resolves (single version across the whole
-         solution) to avoid a mixed-version native crash. -->
-    <PackageReference Include="SkiaSharp" Version="3.119.3-preview.1.1" />
+         solution) to avoid a mixed-version native crash. Avalonia 12.0.5 → SkiaSharp 3.119.4. -->
+    <PackageReference Include="SkiaSharp" Version="3.119.4" />
     <!-- On headless Linux/CI you also need the native asset: -->
-    <!-- <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.3-preview.1.1" /> -->
+    <!-- <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4" /> -->
   </ItemGroup>
 
 </Project>
