@@ -14,9 +14,10 @@
           <TextBlock x:Name="BoxLabel" MinWidth="150" TextAlignment="Center" VerticalAlignment="Center"/>
           <Button x:Name="NextButton" Content="▶"/>
           <Button x:Name="SaveButton" Content="💾 Save"/>
-          <Button x:Name="Gen5Button" Content="Gen5 Tools" IsEnabled="False"/>
-          <Button x:Name="Gen6Button" Content="Gen6 Tools" IsEnabled="False"/>
         </StackPanel>
+        <!-- Filled in code-behind once a save is loaded: only the tool windows that apply to *this*
+             save get a button, so the row never carries dead controls or overflows the panel. -->
+        <StackPanel x:Name="ToolsPanel" Orientation="Horizontal" Spacing="6"/>
         <TextBlock x:Name="SelText" FontSize="11" Opacity="0.85" Text="No selection"/>
       </StackPanel>
 
@@ -30,6 +31,32 @@
             <DataTemplate>
               <Button Padding="0" Margin="2" Background="Transparent" BorderThickness="0" Cursor="Hand">
                 <Border Width="80" Height="92" Background="#33000000" CornerRadius="4">
+                  <Grid>
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                      <Image Source="{Binding Image}" Width="64" Height="52" Stretch="Uniform"/>
+                      <TextBlock Text="{Binding Label}" FontSize="10" TextAlignment="Center" TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <Image Source="{Binding Badge}" Width="16" Height="16"
+                           HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,2,0"/>
+                  </Grid>
+                </Border>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+
+      <StackPanel x:Name="NurseryPanel" DockPanel.Dock="Top" Spacing="2" Margin="0,0,0,6" IsVisible="False">
+        <TextBlock x:Name="NurseryLabel" FontSize="11" FontWeight="Bold" Opacity="0.85" Text="Nursery"/>
+        <ItemsControl x:Name="NurseryGrid">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Button Padding="0" Margin="2" Background="Transparent" BorderThickness="0" Cursor="Hand">
+                <!-- Taller than a box/party tile: the label carries a third line for the nature. -->
+                <Border Width="80" Height="106" Background="#33000000" CornerRadius="4">
                   <Grid>
                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                       <Image Source="{Binding Image}" Width="64" Height="52" Stretch="Uniform"/>

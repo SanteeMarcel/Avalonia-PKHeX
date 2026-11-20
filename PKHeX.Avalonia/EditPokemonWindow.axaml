@@ -95,7 +95,8 @@
         <Grid ColumnDefinitions="60,*,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto">
           <TextBlock Grid.Row="0" Grid.Column="0" Text="Stat" FontWeight="SemiBold" VerticalAlignment="Bottom"/>
           <TextBlock Grid.Row="0" Grid.Column="1" Text="IV (0-31)" FontWeight="SemiBold" Margin="2,0"/>
-          <TextBlock Grid.Row="0" Grid.Column="2" Text="EV (0-252)" FontWeight="SemiBold" Margin="2,0"/>
+          <!-- Relabelled "AV (0-200)" in code-behind for Let's Go (PB7), which uses Awakening Values instead of EVs. -->
+          <TextBlock Grid.Row="0" Grid.Column="2" x:Name="EvHeader" Text="EV (0-252)" FontWeight="SemiBold" Margin="2,0"/>
 
           <TextBlock Grid.Row="1" Grid.Column="0" Text="HP"  VerticalAlignment="Center"/>
           <NumericUpDown Grid.Row="1" Grid.Column="1" x:Name="IvHp"  Minimum="0" Maximum="31"  Margin="2" FormatString="0"/>

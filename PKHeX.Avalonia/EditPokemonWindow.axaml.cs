@@ -50,13 +50,6 @@ public partial class EditPokemonWindow : Window
     private Button _shiny = null!, _apply = null!, _cancel = null!, _recheck = null!, _clearMetDate = null!, _rerollPid = null!;
     private FieldForm? _markForm, _ribbonForm;
 
-    /// <summary>
-    /// Short stat names in the "internal" order used by <see cref="NatureAmp.GetNatureModification"/>
-    /// (index 0–4 = Atk, Def, Spe, SpA, SpD — i.e. the party-stat order minus HP). Used to label each
-    /// nature with the stat it raises/lowers, e.g. Adamant → "(+Atk, -SpA)".
-    /// </summary>
-    private static readonly string[] NatureStatNames = ["Atk", "Def", "Spe", "SpA", "SpD"];
-
     /// <summary>Design-time / XAML preview constructor.</summary>
     public EditPokemonWindow() : this(new PK9 { Species = 1 }, null) { }
 
@@ -138,6 +131,15 @@ public partial class EditPokemonWindow : Window
         _cancel = this.FindControl<Button>("CancelButton")!;
         _recheck = this.FindControl<Button>("RecheckButton")!;
         _clearMetDate = this.FindControl<Button>("ClearMetDateButton")!;
+
+        // Let's Go (PB7) has no EVs — the games use Awakening Values (0-200 each) instead, and any
+        // non-zero EV is flagged illegal. Repurpose the EV column for AVs rather than adding a 7th.
+        if (_pk is IAwakened)
+        {
+            this.FindControl<TextBlock>("EvHeader")!.Text = $"AV (0-{AwakeningUtil.AwakeningMax})";
+            foreach (var n in new[] { _evHp, _evAtk, _evDef, _evSpe, _evSpa, _evSpd })
+                n.Maximum = AwakeningUtil.AwakeningMax;
+        }
     }
 
     private void BuildLookups()
@@ -159,17 +161,12 @@ public partial class EditPokemonWindow : Window
     private void PopulateChoices()
     {
         // Natures, labelled with the stat each one raises/lowers, e.g. "Adamant (+Atk, -SpA)".
-        // Neutral natures (Hardy, Docile, ...) raise and lower the same stat, so show "(neutral)".
         var natureOpts = new List<Opt>();
         foreach (var nat in Enum.GetValues<Nature>())
         {
-            if ((uint)(int)nat >= 25) // skip Random / out-of-range
+            if (!NatureDisplay.IsRealNature(nat)) // skip Random / out-of-range
                 continue;
-            var (up, dn) = nat.GetNatureModification();
-            var label = up == dn
-                ? $"{nat} (neutral)"
-                : $"{nat} (+{NatureStatNames[up]}, -{NatureStatNames[dn]})";
-            natureOpts.Add(new Opt(label, (int)nat));
+            natureOpts.Add(new Opt(NatureDisplay.GetLabel(nat), (int)nat));
         }
         _nature.ItemsSource = natureOpts;
 
@@ -371,8 +368,16 @@ public partial class EditPokemonWindow : Window
 
         _ivHp.Value = _pk.IV_HP; _ivAtk.Value = _pk.IV_ATK; _ivDef.Value = _pk.IV_DEF;
         _ivSpe.Value = _pk.IV_SPE; _ivSpa.Value = _pk.IV_SPA; _ivSpd.Value = _pk.IV_SPD;
-        _evHp.Value = _pk.EV_HP; _evAtk.Value = _pk.EV_ATK; _evDef.Value = _pk.EV_DEF;
-        _evSpe.Value = _pk.EV_SPE; _evSpa.Value = _pk.EV_SPA; _evSpd.Value = _pk.EV_SPD;
+        if (_pk is IAwakened av)
+        {
+            _evHp.Value = av.AV_HP; _evAtk.Value = av.AV_ATK; _evDef.Value = av.AV_DEF;
+            _evSpe.Value = av.AV_SPE; _evSpa.Value = av.AV_SPA; _evSpd.Value = av.AV_SPD;
+        }
+        else
+        {
+            _evHp.Value = _pk.EV_HP; _evAtk.Value = _pk.EV_ATK; _evDef.Value = _pk.EV_DEF;
+            _evSpe.Value = _pk.EV_SPE; _evSpa.Value = _pk.EV_SPA; _evSpd.Value = _pk.EV_SPD;
+        }
 
         SelectOpt(_gender, _pk.Gender);
         SelectOpt(_ball, _pk.Ball);
@@ -533,8 +538,18 @@ public partial class EditPokemonWindow : Window
 
         _pk.IV_HP = (int)(_ivHp.Value ?? 0); _pk.IV_ATK = (int)(_ivAtk.Value ?? 0); _pk.IV_DEF = (int)(_ivDef.Value ?? 0);
         _pk.IV_SPE = (int)(_ivSpe.Value ?? 0); _pk.IV_SPA = (int)(_ivSpa.Value ?? 0); _pk.IV_SPD = (int)(_ivSpd.Value ?? 0);
-        _pk.EV_HP = (int)(_evHp.Value ?? 0); _pk.EV_ATK = (int)(_evAtk.Value ?? 0); _pk.EV_DEF = (int)(_evDef.Value ?? 0);
-        _pk.EV_SPE = (int)(_evSpe.Value ?? 0); _pk.EV_SPA = (int)(_evSpa.Value ?? 0); _pk.EV_SPD = (int)(_evSpd.Value ?? 0);
+        if (_pk is IAwakened av)
+        {
+            // EVs are left untouched (always 0 on a legal PB7).
+            static byte Av(NumericUpDown n) => (byte)Math.Clamp((int)(n.Value ?? 0), 0, AwakeningUtil.AwakeningMax);
+            av.AV_HP = Av(_evHp); av.AV_ATK = Av(_evAtk); av.AV_DEF = Av(_evDef);
+            av.AV_SPE = Av(_evSpe); av.AV_SPA = Av(_evSpa); av.AV_SPD = Av(_evSpd);
+        }
+        else
+        {
+            _pk.EV_HP = (int)(_evHp.Value ?? 0); _pk.EV_ATK = (int)(_evAtk.Value ?? 0); _pk.EV_DEF = (int)(_evDef.Value ?? 0);
+            _pk.EV_SPE = (int)(_evSpe.Value ?? 0); _pk.EV_SPA = (int)(_evSpa.Value ?? 0); _pk.EV_SPD = (int)(_evSpd.Value ?? 0);
+        }
 
         _pk.OriginalTrainerName = _otName.Text ?? string.Empty;
         _pk.DisplayTID = (uint)Math.Max(0, _tid.Value ?? 0);

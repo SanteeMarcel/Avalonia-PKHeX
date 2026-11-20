@@ -44,6 +44,13 @@ public partial class MainWindow : Window
             _moveStatus.Text = "Select a Pokémon in the source panel first.";
             return;
         }
+        // Check before copying: a move whose remove step is refused (e.g. a Let's Go party member)
+        // would otherwise silently become a copy.
+        if (_removeSource.IsChecked == true && !from.CanClearSelectedSlot(out var why))
+        {
+            _moveStatus.Text = $"Can't move: {why}. Untick \"Remove from source\" to copy instead.";
+            return;
+        }
         if (!to.TryGetEmptySlot(out var slot))
         {
             _moveStatus.Text = "Destination box has no free slot — switch to a box with space.";

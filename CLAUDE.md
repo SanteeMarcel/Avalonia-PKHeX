@@ -58,11 +58,26 @@ Core + (ported) drawing layer.
   name leaves that field unchanged. Built code-behind with named XAML controls (reuses the `Opt`
   combo record from `Gen5Forms.cs`). All edit writes funnel through one `WriteControlsToPk()` used by
   both Re-check and Apply.
+- **Day Care / Nursery** ⚠️ (written, **not yet compiled**) `SavePanel` renders a third slot row
+  ("Nursery" on Gen 7+, "Day Care" below that) between the party row and the box grid. Driven by
+  `Sav is IDaycareStorage` so it lights up for **every** generation that implements it (Gen 1–8,
+  incl. SM/USUM via `SAV7`), and the whole `NurseryPanel` collapses when the save has no daycare
+  block (e.g. `SAV7b`). Per slot: `dc.IsDaycareOccupied(i)` → `sav.GetStoredSlot(dc.GetDaycareSlot(i).Span)`
+  (same call WinForms' `SlotInfoMisc.Read` makes), rendered as sprite + species + level (or "(egg)")
+  + **nature** + legality badge; vacant slots show "(empty)". Nature shows on eggs too (the game
+  hides it, but it's what you're checking when breeding with an Everstone). The nursery tile is
+  taller than a box/party tile (106 vs 92) to fit the third label line. Clicking a slot puts the
+  full nature label ("Adamant (+Atk, -SpA)") in the selection line. The header appends "egg available! 🥚" when
+  `sav is IDaycareEggState { IsEggAvailable: true }`. **Read-only on purpose**: the row has its own
+  `OnNurseryClick` handler rather than sharing `OnSlotClick`, so a daycare slot can never become the
+  transfer/delete selection (`SelectedSlot` is indexed against box/party storage and would clobber
+  the wrong slot). No double-tap editor either — writing back needs a `SetDaycareSlot`, which Core
+  doesn't expose generically.
 - **Two-save transfer** ✅ Two `SavePanel`s side by side; move/copy a Pokémon between saves via
   `EntityConverter` (handles cross-gen conversion; correctly refuses illegal backward transfers).
 - **Legality** ✅ Per-slot legal/illegal badge + selection verdict via Core's `LegalityAnalysis`.
-- **Gen 5 tools** ✅ (built + verified on a real save) A `Gen5 Tools` button on each `SavePanel`
-  (auto-enabled when `Sav is SAV5`) opens `Gen5ToolsWindow` with a tab per available feature:
+- **Gen 5 tools** ✅ (built + verified on a real save) A "🛠 BW/BW2 Tools" button appears on a
+  `SavePanel` when `Sav is SAV5`, and opens `Gen5ToolsWindow` with a tab per available feature:
   - **Join Avenue** (BW2 only, `SAV5B2W2.JoinAvenue`) — full WinForms parity: Settings tab
     (name, title, experience, rank, ceiling color, flags, promotion, seed, 32-entry visiting-player
     TID/SID database), a Self tab, and list editors for Visitors, Occupants, Fans, Assistants. Each
@@ -95,8 +110,41 @@ Core + (ported) drawing layer.
   original byte. Remaining minor deviations from WinForms: the records/trivia/activities/shop-count and
   activity-dates arrays still use comma-separated text fields.
 
-- **Gen 6 tools** ⚠️ (written, **not yet compiled or run against a save**) A `Gen6 Tools` button on
-  each `SavePanel` (auto-enabled when `Sav is SAV6`) opens `Gen6ToolsWindow`. Follows the Gen 5
+- **Gen 4 tools / Pokéathlon** ⚠️ (written, **not yet compiled or run against a save**) A `Gen4 Tools`
+  button appears on a `SavePanel` when `Sav is SAV4HGSS` (Pokéathlon is HG/SS only — DP/Pt have no
+  such block), labelled "🛠 HG/SS Tools", and opens `Gen4ToolsWindow`, covering the whole `Pokeathlon4` block
+  (`SAV4HGSS.Pokeathlon`, 0xD9D4, 0xB80). Same shape as the Gen 5/6 windows: live in-memory edits,
+  `FieldForm` surfaces built in code-behind, one `_applyHooks` list flushed by Apply/Close,
+  `ComboWheelGuard.Attach(this)`. Tabs:
+  - **Pokéathlon** — accumulated `Points` (≤99,999), the 27 `DataCard4` flags as checkboxes labelled
+    with their Gen 4 item name (item id **505** = "Data Card 01") *and* the stat each card reads out,
+    the 12 once-daily Athlete Shop purchase flags, obtain-all / clear buttons, and a read-only
+    summary (`CalculateGlobalScore`, `CalculateFriendshipTrophyCount`, `GetFameLevel`) with a
+    Recalculate button — the summary is derived, so it only reflects what's already committed.
+  - **Medals** — the 493-species × 5-bit medal bitfield as a species `ListBox` (each row shows a
+    compact `SP·T·` tag string) driving 5 per-course checkboxes, plus Give All / Clear All
+    (`SetAllMedals` / `Clear`), which route through the pane's reload so the stale form can't
+    overwrite the bulk edit.
+  - **Courses** — the 5 `PokeathlonCourseRecord4`s: three run scores + `ScoreMax` (the one summed
+    into the global score) and the three `PokeathlonParticipant4`s (species dropdown, form, gender,
+    shiny, encryption constant as hex, TID16/SID16).
+  - **Best Scores** — `GetBestScore`/`SetBestScore` for all 10 events.
+  - **Counters** — the whole `PokeathlonGlobalCounters4` block in two columns: play/performance
+    counters, the wireless counters, the 10 per-event 1st-place tallies, `TotalEventLast`, `Fame`,
+    and a read-only `TotalEventFirst` (not stored — Core sums the per-event counters).
+  - **Events** / **Connections** — the player's own per-event data (`GetEventSelf`) and the wireless
+    data (`GetEventConnection`): attempts plus the 5 stored records, each with its team of three
+    packed `SpeciesForm10` entries; the Connections tab adds the 5 opposing
+    `PokeathlonEventTrainer4`s (language dropdown, OT name, TID16/SID16).
+
+  Deviations from the WinForms `SAV_Pokeathlon4`: no species sprites (the medal list is text-only, and
+  participants have no sprite preview — avoids the `SpriteUtil` singleton in a second window), and
+  form fields are numeric spinners rather than `FormConverter` name dropdowns (a form list depends on
+  the selected species, which `FieldForm` has no dependent-combo support for). The Aprijuice block
+  (`Aprijuice4`) is **not** included — Core has the wrapper but `SAV4HGSS` exposes no accessor for it.
+
+- **Gen 6 tools** ⚠️ (written, **not yet compiled or run against a save**) An "🛠 XY/ORAS Tools"
+  button appears on a `SavePanel` when `Sav is SAV6`, and opens `Gen6ToolsWindow`. Follows the Gen 5
   pattern exactly: live in-memory edits, `FieldForm` field surfaces built in code-behind, one
   `_applyHooks` list flushed by Apply/Close, `ComboWheelGuard.Attach(this)`. Tabs:
   - **Trainer** (all `SAV6`, incl. the ORAS demo) — OT/gender/TID/SID, game + language dropdowns,
@@ -127,6 +175,37 @@ Core + (ported) drawing layer.
   (Berry Field, Roamer, Friend Safari, accessory unlock, Pokédex) and ORAS-only (Secret Base,
   Pokéblocks) features are **not** included.
 
+- **Let's Go Pikachu/Eevee (`SAV7b`)** ⚠️ (written, **not yet compiled or run against a save**) Boxes,
+  party and a Trainer tool window. LGPE storage is unusual — 1000 slots stored as a **packed list**
+  (Core pages it as 40 "boxes" × 25), **party-format data in the boxes**, and the party is 6 **pointers
+  into box storage** (`PokeListHeader.PokeListInfo`; `HasParty` is false, but `PartyCount` /
+  `GetPartyOffset` / `PartyData` work). What `SavePanel` does about it:
+  - Box grid columns follow `BoxSlotCount` (`UpdateBoxColumns`: 6 for 30, 5 for 25/20) so rows fill.
+  - Box tiles carry a `GetSlotTag` suffix from `GetBoxSlotFlags`: "(party n)", "★" starter, "🔒" locked
+    — so a box Pokémon that is also in the party row is labelled.
+  - `IsSlotProtected` = Core's `IsOverwriteProtected()` **plus** party membership (Core doesn't treat
+    party as protected, and blanking an LGPE party-backed box slot leaves a dangling pointer). Used by
+    `TryGetEmptySlot` and `ClearSelectedSlot`.
+  - `CanClearSelectedSlot(out reason)` refuses an LGPE **party** move-out (Core's `DeletePartySlot`
+    shifts the pointed-at box *data*, not the pointers) and protected box slots. `MainWindow.Move`
+    checks it **before** copying, so a refused move doesn't silently become a copy.
+  - Edits on SAV7b box slots also call `ResetPartyStats()` (boxes hold party-format data and Core's
+    `SetPartyValues` skips the recompute when stats are present). Party edits write through the pointer.
+  - `SaveCurrentToDiskAsync` calls `IStorageCleanup.FixStoragePreWrite()` (→ `PokeListHeader.CompressStorage`,
+    closes gaps + re-points party/starter) before `Write()` and re-renders — the same step WinForms'
+    `ExportSaveFile` runs. Without it a transfer into a later box leaves an illegal hole in the list.
+  - `EditPokemonWindow` relabels the EV column "AV (0-200)" and reads/writes `IAwakened.AV_*` for PB7
+    (LGPE has no EVs; non-zero EVs are illegal).
+  - `LgpeToolsWindow` ("🛠 Let's Go Tools", `sav is SAV7b`) — Trainer tab only: OT + rival name
+    (written only when changed, to avoid trash-byte churn), gender, game (GP/GE only), language
+    (`SAV7b.Language` writes both copies), 6-digit TID / 4-digit SID (committed together via
+    `SetTrainerID7` after `IsValidTrainerID7` — Core silently wraps an overflowing pair; the window
+    throws into `Flush()` instead), Game Sync ID (16 hex, validated), money, play time, adventure-start
+    date (`PlayerGeoLocation.AdventureBegin`, Epoch-1970 unsigned — pre-1970 rejected) and last-saved
+    date (`Played.LastSavedDate`), both preserving their time of day. **Omitted vs WinForms
+    `SAV_Trainer7GG`**: map coordinates, GO Park import/export, title/fashion unlocks. Capture Records
+    and the Pokédex editor aren't ported either.
+
 Deferred / not done: **compiling + testing the Gen 6 window** (see gotcha #7); sprite pixel-diff
 verification vs a Windows build; CI; the remaining WinForms screens (other per-generation save
 editors, etc.).
@@ -144,11 +223,17 @@ editors, etc.).
     tracks `SelectedFromParty` so `ClearSelectedSlot` does a party-aware delete
     (`Sav.DeletePartySlot`) vs blanking a box slot. Exposes `Sav`, `SelectedPk`, `SelectedSlot`,
     `SelectedFromParty`, `CurrentBox`, `SelectionChanged`, `TryGetEmptySlot`, `ClearSelectedSlot`,
-    `Refresh()`. Also hosts the per-generation tool buttons: `Gen5 Tools` (`IsEnabled = sav is SAV5`
-    → `OpenGen5Tools()`) and `Gen6 Tools` (`IsEnabled = sav is SAV6` → `OpenGen6Tools()`), both
-    enabled in `LoadFromPath` and both handing the window `SaveCurrentToDiskAsync` as its persist
-    callback. Adding another generation = one XAML button + field + `FindControl` + click handler +
-    one `IsEnabled` line; `MainWindow` needs no change.
+    `Refresh()`. Also hosts the per-generation tool buttons, which are **built dynamically after a
+    save loads** rather than declared in XAML and greyed out — one disabled button per supported
+    generation kept growing the nav row until the applicable one scrolled out of view. The XAML
+    carries an empty `ToolsPanel` `StackPanel`; `LoadFromPath` calls `BuildToolButtons()`, which walks
+    the static `ToolWindows` table and materialises a button only for the entries whose `Match`
+    accepts the loaded save. Each entry is a `ToolWindow(Label, Match, Create)` record — labelled by
+    games, not generation number ("HG/SS Tools", not "Gen4 Tools", since Pokéathlon is HG/SS only) —
+    and `Create` receives the live save, `LoadedPath` and `SaveCurrentToDiskAsync` as the persist
+    callback. `OpenToolWindow` re-checks `Match` at click time (the panel can load a different save
+    after the button was built). **Adding another generation is one entry in `ToolWindows`** — no
+    XAML, no field, no `FindControl`, no click handler; `MainWindow` needs no change.
   - `SpriteConvert.cs` — `SKBitmap → Avalonia Bitmap` helper + the `SlotVm` view-model.
   - `EditPokemonWindow.axaml(.cs)` — rich single-Pokémon editor opened by double-clicking a slot.
     Edits a clone (nickname, level, nature, ability, held item, 4 moves + per-move PP-Ups, IVs/EVs,
@@ -159,6 +244,20 @@ editors, etc.).
     along with the `Opt` combo record). One `WriteControlsToPk()` (shared by the Re-check preview and
     Apply) writes every control back to the clone; `LoadFromPk()` reflects the clone into the
     controls; `RefreshLegality()` shows `LegalityAnalysis.Report()`.
+  - `Gen4ToolsWindow.axaml(.cs)` — the Gen 4 (HG/SS) feature window: the whole Pokéathlon block.
+    Minimal XAML shell (`RootTabs` + Apply/Close + status text), everything else code-behind. Opened
+    from `SavePanel.OpenGen4Tools()` with the live `SaveFile`, the loaded path and
+    `SavePanel.SaveCurrentToDiskAsync`. Has one piece the Gen 5/6 windows don't: a reusable
+    `BuildListPane(labels, build, hint, extra, listWidth)` helper — a left index `ListBox` driving a
+    right-hand `FieldForm` built on demand, committing the open form on selection change and on
+    Apply, and handing `extra` a reload callback that drops the stale form (the gotcha #9 fix). All
+    four list-style tabs (Medals, Courses, Events, Connections) share it. Its `Flush()` also
+    **returns false and keeps the window open** if a setter threw, instead of letting the exception
+    escape the `async void` click handler (gotcha #8).
+  - `ToolsUi.cs` — the shared layout/option helpers for the tool windows: `TwoColumns`, `WithToolbar`,
+    `Bulk`, `ReadOnlyRow`, `HexRow`, `ToOpts`, `ToOptsWithNone`, `SplitPascal`. These began as private
+    statics inside `Gen6ToolsWindow`, which **still has its own copies** — anything new should use
+    `ToolsUi`, and Gen6 should be migrated to it when it's next touched.
   - `Gen5ToolsWindow.axaml(.cs)` — the Gen 5 feature window (Join Avenue + Memory Link + Global Link +
     Entrée Forest). XAML is a minimal shell (`RootTabs` TabControl + Apply/Close buttons); all field UI
     is built in code-behind. Opened from `SavePanel.OpenGen5Tools()`; receives the live `SaveFile`, the
@@ -171,6 +270,13 @@ editors, etc.).
     `new FilteredGameDataSource(sav, GameInfo.Sources)` (**not** the raw `GameStrings` arrays, which
     run to Gen 9 and would let you write an out-of-range id into a Gen 6 block); Gen6-only tables
     (`puffs`, `trainingbags`, `trainingstage`) come straight from `GameInfo.GetStrings("en")`.
+  - `LgpeToolsWindow.axaml(.cs)` — the Let's Go (`SAV7b`) tool window: a Trainer tab. Same shell
+    and `_applyHooks` / guarded `Flush()` shape as `Gen4ToolsWindow`.
+  - `NatureDisplay.cs` — shared nature formatting. `GetName(nature)` → "Adamant";
+    `GetLabel(nature)` → "Adamant (+Atk, -SpA)" (or "(neutral)") via `NatureAmp.GetNatureModification`;
+    `IsRealNature(nature)` filters the 25 real natures out of the `Nature` enum (which also carries
+    Random / out-of-range values). Used by `EditPokemonWindow`'s nature dropdown and `SavePanel`'s
+    nursery row — don't re-derive the +/- stat labels anywhere else.
   - `Gen5Forms.cs` — `FieldForm` (code-built label/value form with auto Load/Save) + `Opt` combo item.
     Rows: `Num`/`Text`/`Check`/`Combo`/`Custom`/`CustomControl` plus `Date` (a `DatePicker` + Clear
     button wired in `DateOnly?` terms). Used to assemble the large Join Avenue + Entrée field surfaces
@@ -231,21 +337,32 @@ Requires the .NET 10 SDK. `PKHeX.WinForms` cannot build on macOS/Linux — that'
    scrolling with the pointer over a combo silently edits it (e.g. ability "Slot 2" → "Hidden"),
    and the next Apply/Re-check persists the accident. `ComboWheelGuard.Attach(window)` (tunnel
    handler; swallows the wheel and scrolls the ancestor `ScrollViewer` instead) is applied to
-   `EditPokemonWindow` + `Gen5ToolsWindow` + `Gen6ToolsWindow` — attach it to any new window
+   `EditPokemonWindow` + `Gen4ToolsWindow` + `Gen5ToolsWindow` + `Gen6ToolsWindow` + `LgpeToolsWindow` — attach it to any new window
    containing combos.
 6. **`SpriteUtil` is a global singleton.** `SpriteUtil.Initialize(sav)` sets the active sprite
    builder. With two saves loaded, call `Initialize(thisSav)` at the START of each panel's render
    so sprites use the right builder. `SavePanel.RenderBox` already does this.
-7. **`Gen6ToolsWindow` has never been compiled.** It was written against Core by reading the source,
+7. **`Gen4ToolsWindow`, `Gen6ToolsWindow` and `LgpeToolsWindow` (+ the SAV7b changes in `SavePanel` /
+   `EditPokemonWindow` / `MainWindow`) have never been compiled.** For LGPE, verify on a real save:
+   transfer into box 2+ → save → reload (storage compaction), edit a party member, and that a party
+   member's box tile shows "(party n)". For Gen 4 specifically, all
+   the Pokéathlon block wrappers (`PokeathlonMedalManager4`, `PokeathlonCourseRecord4`,
+   `PokeathlonEventData4`, `PokeathlonParticipant4`, `PokeathlonGlobalCounters4`, …) are plain
+   `struct`s over a `Memory<byte>` — unlike Gen 6's `HallFame6Entity` ref structs they **can** be
+   captured by a lambda and mutated through the copy, which is what every `FieldForm` row here does.
+   The one exception is `SpeciesForm10`: it's a packed value, *not* a view over save memory, so those
+   rows read-modify-write the whole field (see `AddEntryRows`). Verify round-trips on a real HG *and*
+   SS save.
+8. **`Gen6ToolsWindow` has never been compiled.** It was written against Core by reading the source,
    not by building — expect a tail of name/signature fixes on the first
    `dotnet build PKHeX.Avalonia/PKHeX.Avalonia.csproj`, and verify round-trips (edit → save → reload)
    on a real XY *and* ORAS save before trusting it.
-8. **Apply runs from an `async void` click handler.** `apply.Click += async (_, _) => …` in both tools
+9. **Apply runs from an `async void` click handler.** `apply.Click += async (_, _) => …` in the tools
    windows means an exception escaping any `FieldForm.Save` hook is unhandled and kills the process.
    Setters that validate (notably `MyStatus6.GameSyncID`, which throws on both a wrong length and a
    non-hex digit) must be guarded in the UI layer, not left to throw. See
    `Gen6ToolsWindow.SetGameSyncID`.
-9. **A `FieldForm`'s registered `Save()` will happily undo a bulk edit.** The rows captured the
+10. **A `FieldForm`'s registered `Save()` will happily undo a bulk edit.** The rows captured the
    pre-op values when they were loaded, so after any block-level mutation (`Puff6.MaxCheat`,
    `OPower6.ClearAll`, `SuperTrainBlock.ClearBlock`, `HallOfFame6.ClearEntry`, `EntreeForest.DeleteAll`)
    you must either call `form.Load()` to re-read, or drop the cached form entirely before the next
@@ -325,6 +442,45 @@ PKM editing:
   `MaxCount`). Read/write the live value with `ReflectUtil.GetValue(pk, name)` /
   `ReflectUtil.SetValue(pk, name, value)`. (Reflection carries `[RequiresUnreferencedCode]`; the
   Avalonia app isn't trimmed, so suppress IL2026 on the calling method.)
+
+Gen 4 saves (HG/SS) — Pokéathlon:
+- Hierarchy `SaveFile → SAV4 → {SAV4DP, SAV4Pt, SAV4HGSS}`. The Pokéathlon block is **HG/SS only**:
+  `sav.Pokeathlon` → `Pokeathlon4` (a sealed **class** over `GeneralBuffer.Slice(0xD9D4, 0xB80)`), so
+  gate on `sav is SAV4HGSS`. Everything below is a `struct` over a `Memory<byte>` slice of the live
+  save — freely capturable by a lambda, and mutating a captured copy writes through (no copy-back).
+- `Pokeathlon4`: `Points` (`MaxPoints` 99,999), `FlagsDataCard` (27 bits, `DataCardAllObtained`),
+  `FlagsDailyShop` (12 bits, `FlagsShopAllObtained`), `GetBestScore`/`SetBestScore(PokeathlonEvent4)`
+  (the per-event Athlete-Point bests), `CalculateGlobalScore()` (course bests + medal count + event
+  bests), `CalculateFriendshipTrophyCount(score)` + `FriendshipTrophyThresholds` (10 max).
+- `PokeathlonStat4` = the 5 courses (Speed/Power/Skill/Stamina/Jump, `.Count`);
+  `PokeathlonEvent4` = the 10 events (`.Count`); `DataCard4` = the 27 cards, each naming the counter
+  it reads out. Data Card item names: `GameStrings.GetItemStrings(EntityContext.Gen4)` from item id
+  **505** ("Data Card 01").
+- `GetCourseRecord(PokeathlonStat4)` → `PokeathlonCourseRecord4`: `Score0/1/2` + `ScoreMax` (only
+  `ScoreMax` feeds the global score), `GetParticipant(0..2)` → `PokeathlonParticipant4` (packed
+  `Species`/`Form`/`Gender`/`IsShiny` + `EncryptionConstant` + `ID32`/`TID16`/`SID16`).
+- `Medals` → `PokeathlonMedalManager4`: `SIZE` = 493 (1-indexed `[Bulbasaur..Arceus]`);
+  `GetMedal`/`SetMedal`/`AwardMedal(species, bits)` with 5 bits per species indexed by
+  `PokeathlonStat4` (`MaxMedalBits` 0b11111), `SetAllMedals()`, `Clear()`, `GetTotalCount()`.
+  **Species is 1-indexed**: `GetMedal` decrements first, so species 0 underflows and throws.
+- `GetEventSelf(PokeathlonEvent4)` → `PokeathlonEventData4`: `Attempts` (`MaxAttempts`) +
+  `GetRecord(0..4)` (`MaxRecord` = 5) → `PokeathlonEventRecord4` (`Record`, units are event-specific
+  — Hurdle Dash is a frame count, lower is better — plus `Entry0/1/2`).
+- `GetEventConnection(PokeathlonEvent4)` → `PokeathlonConnection4`: `.Inner` (a `PokeathlonEventData4`
+  at offset 0) + `GetTrainer(0..4)` → `PokeathlonEventTrainer4` (`OriginalTrainerName` (7 chars,
+  encoded per `Language` — set Language first), `TID16`/`SID16`, `Language`).
+- `SpeciesForm10` — a packed `ushort` (10 bits species, 6 bits form) with implicit `ushort` conversions
+  and an `IsValid` sanity check. **Not** a view over save memory: edit it read-modify-write
+  (`var e = rec.Entry0; e.Species = x; rec.Entry0 = e;`).
+- `GlobalCounters` → `PokeathlonGlobalCounters4`: `TimeSpent` (minutes, `MaxPlay` 59,999),
+  `SessionsJoined`, `PlacedFirst`/`PlacedLast`, `BonusesEarned`, `Instructions`, `Failed`, `Jumped`,
+  `Acquired`, `Tackled`, `FellDown`, `Dashed`, `Switched`, `SelfImpeded`, `ConnectionJoined/First/Last`,
+  `this[PokeathlonEvent4]` (per-event 1st places), `TotalEventLast`, `Fame` (`MaxFame`), all clamped to
+  `MaxStat` 9,999,999. `TotalEventFirst` is **computed** (summed from the indexer, not stored) and
+  `SetDataCardStat(DataCard4.EventFirst, …)` is a deliberate no-op. `GetFameLevel(value)` →
+  0–12 against `FameInclusiveThreshold`. `Get/SetDataCardStat(DataCard4)` maps a card to its counter.
+- `Aprijuice4` exists in Core (Fame/Mildness/5 flavours, `CalculateLevel`, `CalculatePrice`) but
+  **`SAV4HGSS` exposes no accessor for it** — nothing to wire up from the save side yet.
 
 Gen 5 saves (BW/BW2):
 - Hierarchy `SaveFile → SAV5 → {SAV5BW, SAV5B2W2}`. Detect with `sav is SAV5` (any Gen5) /
@@ -422,6 +578,20 @@ Gen 6 saves (XY/ORAS):
   `GameInfo.LanguageDataSource(6, EntityContext.Gen6)`. Note the filtered lists may omit value 0, which
   is the legitimate "empty" state for a HoF member / Super Training holder / Link gift — prepend it.
 
+Day Care / Nursery (generation-agnostic):
+- `sav is IDaycareStorage dc` — `dc.DaycareSlotCount`, `dc.IsDaycareOccupied(i)`,
+  `dc.GetDaycareSlot(i)` → `Memory<byte>` over the live save, `dc.SetDaycareOccupied(i, bool)`.
+  Decode with `sav.GetStoredSlot(span)` (**stored**, not party, format — even on Gen 5 where the
+  slice is `SIZE_5PARTY`; `GetStoredSlot` takes the leading `SIZE_STORED` bytes and decrypts).
+- `sav is IDaycareEggState` → `IsEggAvailable`; `IDaycareRandomState<T>` → `Seed` (Gen 7 = `UInt128`,
+  and it's an **explicit** interface impl on `SAV7`, so you must cast). `IDaycareExperience` →
+  `Get/SetDaycareEXP(i)` on the gens that store it.
+- Gen 7 (`SAV7`, SM/USUM): `sav.Daycare` → `Daycare7`, 2 slots, slot stride
+  `PokeCrypto.SIZE_6STORED + 1` (a leading occupancy byte per slot). LGPE (`SAV7b`) has a
+  `Daycare7b` block but does **not** implement `IDaycareStorage` — the games have no breeding.
+- Gen 8 SwSh uses `IDaycareMulti` (multiple daycares, indexer → `IDaycareStorage`), **not**
+  `IDaycareStorage` directly, so an `is IDaycareStorage` gate silently skips it.
+
 Transfer / legality:
 - `EntityConverter.TryMakePKMCompatible(srcPk, destSav.BlankPKM, out result, out converted)` →
   `bool`; check `result.IsSuccess`. Handles cross-gen conversion. Transfers are **forward-only**
@@ -462,7 +632,12 @@ Transfer / legality:
   levels/powers + forest unlock settings + Unlock-All / Delete-All buttons + a 530-slot `ListBox`
   editor (Species/Move/Gender/Form/Animation). Crypto handled by Core (`Slots` getter decrypts;
   `SAV5.GetFinalData()` → `EndAccess()` re-encrypts on save).
-- **Gen 6 (XY/ORAS)** ⚠️ **next up: compile + test.** `Gen6ToolsWindow` covers the six XY+ORAS-shared
+- **Gen 4 (HG/SS) Pokéathlon** ⚠️ **compile + test.** `Gen4ToolsWindow` covers the whole
+  `Pokeathlon4` block (7 tabs) but has never been built or run — see gotcha #7. After it's green on a
+  real HG/SS save, the obvious follow-ups are species sprites in the medal + participant editors,
+  `FormConverter` name dropdowns in place of the numeric Form spinners, and the other HG/SS misc
+  surfaces WinForms exposes in `SAV_Misc4` (Poké Walker, Battle Frontier, `Record4`, Underground).
+- **Gen 6 (XY/ORAS)** ⚠️ **compile + test.** `Gen6ToolsWindow` covers the six XY+ORAS-shared
   features (Trainer, Poké Puffs, O-Powers, Super Training, Pokémon Link, Hall of Fame) but has never
   been built or run — see gotcha #7. After it's green on a real save, the obvious follow-ups are:
   ORAS-only tabs (Secret Base — the biggest single WinForms form in Gen 6 — and Pokéblocks/berry

@@ -3,6 +3,8 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives; // UniformGrid
+using Avalonia.Controls.Templates; // FuncTemplate
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
@@ -18,13 +20,18 @@ public partial class SavePanel : UserControl
     private const int LanguageEnglish = 2;
 
     private int _box;
+    /// <summary>"Nursery" is the Gen 7+ name for what earlier games called the Day Care.</summary>
+    private string _nurseryTitle = "Nursery";
     private readonly ObservableCollection<SlotVm> _slots = [];
     private readonly ObservableCollection<SlotVm> _party = [];
+    private readonly ObservableCollection<SlotVm> _nursery = [];
 
-    private readonly TextBlock _titleText, _trainerText, _boxLabel, _selText, _partyLabel;
-    private readonly Button _loadButton, _prevButton, _nextButton, _saveButton, _gen5Button, _gen6Button;
+    private readonly TextBlock _titleText, _trainerText, _boxLabel, _selText, _partyLabel, _nurseryLabel;
+    private readonly Button _loadButton, _prevButton, _nextButton, _saveButton;
+    private readonly StackPanel _toolsPanel;
     private readonly Image _wallpaper;
-    private readonly ItemsControl _boxGrid, _partyGrid;
+    private readonly ItemsControl _boxGrid, _partyGrid, _nurseryGrid;
+    private readonly StackPanel _nurseryPanel;
 
     public SaveFile? Sav { get; private set; }
     public string? LoadedPath { get; private set; }
@@ -47,28 +54,43 @@ public partial class SavePanel : UserControl
         _boxLabel = this.FindControl<TextBlock>("BoxLabel")!;
         _selText = this.FindControl<TextBlock>("SelText")!;
         _partyLabel = this.FindControl<TextBlock>("PartyLabel")!;
+        _nurseryLabel = this.FindControl<TextBlock>("NurseryLabel")!;
+        _nurseryPanel = this.FindControl<StackPanel>("NurseryPanel")!;
+        _nurseryGrid = this.FindControl<ItemsControl>("NurseryGrid")!;
         _loadButton = this.FindControl<Button>("LoadButton")!;
         _prevButton = this.FindControl<Button>("PrevButton")!;
         _nextButton = this.FindControl<Button>("NextButton")!;
         _saveButton = this.FindControl<Button>("SaveButton")!;
-        _gen5Button = this.FindControl<Button>("Gen5Button")!;
-        _gen6Button = this.FindControl<Button>("Gen6Button")!;
+        _toolsPanel = this.FindControl<StackPanel>("ToolsPanel")!;
         _wallpaper = this.FindControl<Image>("Wallpaper")!;
         _boxGrid = this.FindControl<ItemsControl>("BoxGrid")!;
         _partyGrid = this.FindControl<ItemsControl>("PartyGrid")!;
 
         _boxGrid.ItemsSource = _slots;
         _partyGrid.ItemsSource = _party;
+        _nurseryGrid.ItemsSource = _nursery;
         _loadButton.Click += async (_, _) => await OpenFromPickerAsync();
         _prevButton.Click += (_, _) => ChangeBox(-1);
         _nextButton.Click += (_, _) => ChangeBox(+1);
         _saveButton.Click += async (_, _) => await SaveCurrentToDiskAsync();
-        _gen5Button.Click += (_, _) => OpenGen5Tools();
-        _gen6Button.Click += (_, _) => OpenGen6Tools();
         _boxGrid.AddHandler(Button.ClickEvent, OnSlotClick);
         _partyGrid.AddHandler(Button.ClickEvent, OnSlotClick);
         _boxGrid.DoubleTapped += OnSlotDoubleTap;
         _partyGrid.DoubleTapped += OnSlotDoubleTap;
+        // Nursery is read-only: it gets its own click handler so a daycare slot can never
+        // become the transfer/delete selection (which is indexed against box/party storage).
+        _nurseryGrid.AddHandler(Button.ClickEvent, OnNurseryClick);
+    }
+
+    private void OnNurseryClick(object? sender, RoutedEventArgs e)
+    {
+        if ((e.Source as Control)?.DataContext is not SlotVm { Pk: { Species: > 0 } pk } vm)
+            return;
+        var name = SpeciesName.GetSpeciesName(pk.Species, LanguageEnglish);
+        var gender = pk.Gender switch { 0 => " ♂", 1 => " ♀", _ => "" };
+        var egg = pk.IsEgg ? " (egg)" : $" — Lv. {pk.CurrentLevel}";
+        var nature = NatureDisplay.GetLabel(pk.Nature);
+        _selText.Text = $"{_nurseryTitle} {vm.Index + 1}: {name}{gender}{egg} — {nature} (read-only)";
     }
 
     private void OnSlotDoubleTap(object? sender, TappedEventArgs e)
@@ -96,15 +118,16 @@ public partial class SavePanel : UserControl
         if (Sav is null) return;
         try
         {
-            if (isParty)
-            {
+            // Let's Go stores party-format data (with battle stats) in its boxes too, and Core's
+            // SetPartyValues skips the recompute when stats are already present — so a level/IV/AV
+            // edit would keep stale stats unless we reset them here.
+            if (isParty || Sav is SAV7b)
                 edited.ResetPartyStats(); // recompute stored battle stats after level/IV/EV edits
-                Sav.SetPartySlotAtIndex(edited, index);
-            }
+
+            if (isParty)
+                Sav.SetPartySlotAtIndex(edited, index); // LGPE: writes through the party pointer into box storage
             else
-            {
                 Sav.SetBoxSlotAtIndex(edited, _box, index);
-            }
 
             RenderBox(); // re-renders box + party + legality badges
             var name = SpeciesName.GetSpeciesName(edited.Species, LanguageEnglish);
@@ -186,9 +209,9 @@ public partial class SavePanel : UserControl
             LoadedPath = path;
             _box = 0;
             ClearSelection();
+            UpdateBoxColumns();
             RenderBox();
-            _gen5Button.IsEnabled = sav is SAV5;
-            _gen6Button.IsEnabled = sav is SAV6;
+            BuildToolButtons();
             _trainerText.Text = $"{sav.GetType().Name} — OT {sav.OT} ({sav.Version})";
         }
         catch (Exception ex)
@@ -216,6 +239,16 @@ public partial class SavePanel : UserControl
             });
             if (file is null) return null;
 
+            // Let's Go keeps its 1000 storage slots as a packed list (no gaps allowed); a transfer
+            // into a later box or a move-out leaves holes. Core compacts the list and re-points the
+            // party/starter indexes — same pre-write step WinForms' ExportSaveFile runs. Slots may
+            // shift, so drop the selection and re-render.
+            if (Sav is IStorageCleanup cleanup && cleanup.FixStoragePreWrite())
+            {
+                ClearSelection();
+                RenderBox();
+            }
+
             var bytes = Sav.Write().ToArray();
             await using (var stream = await file.OpenWriteAsync())
                 await stream.WriteAsync(bytes);
@@ -231,31 +264,60 @@ public partial class SavePanel : UserControl
         }
     }
 
-    private void OpenGen5Tools()
+    /// <summary>
+    /// One per-generation tool window. <c>Match</c> decides whether the loaded save has the feature
+    /// blocks the window edits; <c>Label</c> names the games rather than the generation number (a
+    /// "Gen4 Tools" button on a Diamond save would be a lie — Pokéathlon is HG/SS only); <c>Create</c>
+    /// builds the window with the live save, the loaded path and the persist callback.
+    /// </summary>
+    private sealed record ToolWindow(
+        string Label,
+        Func<SaveFile, bool> Match,
+        Func<SaveFile, string?, Func<Task<string?>>?, Window> Create);
+
+    /// <summary>
+    /// The tool windows this panel can open, in button order. Adding a generation is one entry here
+    /// — no XAML, no field, no click handler. <see cref="BuildToolButtons"/> only materialises the
+    /// entries that match the save that's actually loaded.
+    /// </summary>
+    private static readonly ToolWindow[] ToolWindows =
+    [
+        new("HG/SS Tools", s => s is SAV4HGSS, (s, p, persist) => new Gen4ToolsWindow(s, p, persist)),
+        new("BW/BW2 Tools", s => s is SAV5, (s, p, persist) => new Gen5ToolsWindow(s, p, persist)),
+        new("XY/ORAS Tools", s => s is SAV6, (s, p, persist) => new Gen6ToolsWindow(s, p, persist)),
+        new("Let's Go Tools", s => s is SAV7b, (s, p, persist) => new LgpeToolsWindow(s, p, persist)),
+    ];
+
+    /// <summary>
+    /// Rebuilds the tool button row for the loaded save. Buttons are created on load rather than
+    /// declared in XAML and greyed out: a disabled button for every generation we support would keep
+    /// growing the row until the applicable one scrolled out of view.
+    /// </summary>
+    private void BuildToolButtons()
     {
-        if (Sav is not SAV5)
-        {
-            _trainerText.Text = "Gen 5 tools require a BW/BW2 save.";
+        _toolsPanel.Children.Clear();
+        if (Sav is not { } sav)
             return;
+        foreach (var tool in ToolWindows)
+        {
+            if (!tool.Match(sav))
+                continue;
+            var button = new Button { Content = $"🛠 {tool.Label}" };
+            button.Click += (_, _) => OpenToolWindow(tool);
+            _toolsPanel.Children.Add(button);
         }
-        var owner = TopLevel.GetTopLevel(this) as Window;
-        var win = new Gen5ToolsWindow(Sav, LoadedPath, SaveCurrentToDiskAsync);
-        if (owner is not null)
-            win.Show(owner);
-        else
-            win.Show();
     }
 
-    private void OpenGen6Tools()
+    private void OpenToolWindow(ToolWindow tool)
     {
-        if (Sav is not SAV6)
+        // Re-checked at click time: the panel can load a different save after the button was built.
+        if (Sav is not { } sav || !tool.Match(sav))
         {
-            _trainerText.Text = "Gen 6 tools require an XY/ORAS save.";
+            _trainerText.Text = $"{tool.Label} doesn't apply to the loaded save.";
             return;
         }
-        var owner = TopLevel.GetTopLevel(this) as Window;
-        var win = new Gen6ToolsWindow(Sav, LoadedPath, SaveCurrentToDiskAsync);
-        if (owner is not null)
+        var win = tool.Create(sav, LoadedPath, SaveCurrentToDiskAsync);
+        if (TopLevel.GetTopLevel(this) is Window owner)
             win.Show(owner);
         else
             win.Show();
@@ -282,7 +344,7 @@ public partial class SavePanel : UserControl
         var data = Sav.GetBoxData(_box);
         for (int i = 0; i < data.Length; i++)
         {
-            if (data[i].Species == 0 && !Sav.IsBoxSlotOverwriteProtected(_box, i))
+            if (data[i].Species == 0 && !IsSlotProtected(_box, i))
             {
                 slot = i;
                 return true;
@@ -291,10 +353,45 @@ public partial class SavePanel : UserControl
         return false;
     }
 
+    /// <summary>
+    /// Whether <see cref="ClearSelectedSlot"/> may remove the current selection. Checked by the
+    /// transfer view <em>before</em> it copies, so a refused move-out never leaves a duplicate.
+    /// </summary>
+    public bool CanClearSelectedSlot(out string reason)
+    {
+        reason = string.Empty;
+        if (Sav is null || SelectedSlot < 0) { reason = "nothing selected"; return false; }
+        if (Sav is SAV7b && SelectedFromParty)
+        {
+            // LGPE party slots are pointers into box storage; Core's DeletePartySlot shuffles the
+            // pointed-at box data instead of the pointers, which would scramble the boxes.
+            reason = "Let's Go party members can't be removed here (deposit them in-game first)";
+            return false;
+        }
+        if (!SelectedFromParty && IsSlotProtected(_box, SelectedSlot))
+        {
+            reason = "that slot is locked, the starter, or in the party";
+            return false;
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// Overwrite protection plus party backing. Core's <c>IsOverwriteProtected</c> covers locked /
+    /// starter / battle-team slots but not party membership — and on Let's Go a party member *is* a
+    /// box slot, so blanking it would leave the party pointing at an empty slot.
+    /// </summary>
+    private bool IsSlotProtected(int box, int slot)
+    {
+        if (Sav is null) return true;
+        var flags = Sav.GetBoxSlotFlags(box, slot);
+        return flags.IsOverwriteProtected() || flags.IsParty() >= 0;
+    }
+
     /// <summary>Clears the currently selected slot (used for a true move-out).</summary>
     public void ClearSelectedSlot()
     {
-        if (Sav is null || SelectedSlot < 0) return;
+        if (Sav is null || !CanClearSelectedSlot(out _)) return;
         if (SelectedFromParty)
         {
             Sav.DeletePartySlot(SelectedSlot);
@@ -302,7 +399,6 @@ public partial class SavePanel : UserControl
             RenderBox();
             return;
         }
-        if (Sav.IsBoxSlotOverwriteProtected(_box, SelectedSlot)) return;
         Sav.SetBoxSlotAtIndex(Sav.BlankPKM, _box, SelectedSlot);
         ClearSelection();
         RenderBox();
@@ -335,7 +431,7 @@ public partial class SavePanel : UserControl
         {
             var pk = data[i];
             if (pk.Species == 0) { _slots.Add(new SlotVm(null, string.Empty, i, pk)); continue; }
-            var speciesName = SpeciesName.GetSpeciesName(pk.Species, LanguageEnglish);
+            var speciesName = SpeciesName.GetSpeciesName(pk.Species, LanguageEnglish) + GetSlotTag(_box, i);
             var badge = SpriteConvert.ToAvalonia(SpriteUtil.GetLegalIndicator(IsLegal(pk)));
             _slots.Add(new SlotVm(SpriteConvert.FromPkm(pk), speciesName, i, pk, badge));
         }
@@ -345,6 +441,94 @@ public partial class SavePanel : UserControl
         _boxLabel.Text = $"{label} ({_box + 1}/{Sav.BoxCount})";
 
         RenderParty();
+        RenderNursery();
+    }
+
+    /// <summary>
+    /// Suffix marking box slots the save treats specially. Only Let's Go (and Stadium) report party
+    /// membership on a box slot — their party *is* a set of pointers into box storage — so this is
+    /// what tells the user that a box Pokémon is also in the party row above.
+    /// </summary>
+    private string GetSlotTag(int box, int slot)
+    {
+        if (Sav is null) return string.Empty;
+        var flags = Sav.GetBoxSlotFlags(box, slot);
+        var tag = string.Empty;
+        if (flags.HasFlag(StorageSlotSource.Starter)) tag += " ★";
+        if (flags.IsParty() is >= 0 and var p) tag += $"\n(party {p + 1})";
+        if (flags.HasFlag(StorageSlotSource.Locked)) tag += " 🔒";
+        return tag;
+    }
+
+    /// <summary>
+    /// Box grid column count: 6 for the usual 30-slot box, 5 for Let's Go's 25-slot "boxes" (its
+    /// 1000-slot list paged by Core) and Gen 1/2's 20-slot boxes, so rows come out full.
+    /// </summary>
+    private void UpdateBoxColumns()
+    {
+        var count = Sav?.BoxSlotCount ?? 30;
+        var columns = count % 6 == 0 ? 6 : count % 5 == 0 ? 5 : 6;
+        _boxGrid.ItemsPanel = new FuncTemplate<Panel?>(() => new UniformGrid { Columns = columns });
+    }
+
+    /// <summary>
+    /// Renders the Day Care / Nursery occupants. Generation-agnostic: any save implementing
+    /// <see cref="IDaycareStorage"/> (Gen 1–8) is covered; saves without one hide the row.
+    /// </summary>
+    private void RenderNursery()
+    {
+        _nursery.Clear();
+        var sav = Sav;
+        if (sav is not IDaycareStorage dc)
+        {
+            _nurseryPanel.IsVisible = false;
+            return;
+        }
+
+        _nurseryPanel.IsVisible = true;
+        SpriteUtil.Initialize(sav); // ensure sprites use this save's builder
+
+        var count = dc.DaycareSlotCount;
+        var occupied = 0;
+        for (int i = 0; i < count; i++)
+        {
+            var pk = GetDaycarePk(sav, dc, i);
+            if (pk is null || pk.Species == 0)
+            {
+                _nursery.Add(new SlotVm(null, "(empty)", i));
+                continue;
+            }
+            occupied++;
+            var speciesName = SpeciesName.GetSpeciesName(pk.Species, LanguageEnglish);
+            // Nature matters for breeding (Everstone), so show it on eggs too even though the game hides it.
+            var line1 = pk.IsEgg ? $"{speciesName} (egg)" : $"{speciesName}\nLv. {pk.CurrentLevel}";
+            var label = $"{line1}\n{NatureDisplay.GetName(pk.Nature)}";
+            var badge = SpriteConvert.ToAvalonia(SpriteUtil.GetLegalIndicator(IsLegal(pk)));
+            _nursery.Add(new SlotVm(SpriteConvert.FromPkm(pk), label, i, pk, badge));
+        }
+
+        _nurseryTitle = sav.Generation >= 7 ? "Nursery" : "Day Care";
+        var eggReady = sav is IDaycareEggState { IsEggAvailable: true } ? " — egg available! 🥚" : "";
+        _nurseryLabel.Text = occupied == 0
+            ? $"{_nurseryTitle} (empty){eggReady}"
+            : $"{_nurseryTitle} ({occupied}/{count}){eggReady}";
+    }
+
+    /// <summary>Decodes the stored entity in a daycare slot, or null when the slot is vacant/unreadable.</summary>
+    private static PKM? GetDaycarePk(SaveFile sav, IDaycareStorage dc, int index)
+    {
+        try
+        {
+            if (!dc.IsDaycareOccupied(index))
+                return null;
+            var span = dc.GetDaycareSlot(index).Span;
+            return span.Length < sav.SIZE_STORED ? null : sav.GetStoredSlot(span);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"daycare slot {index}: {ex.Message}");
+            return null;
+        }
     }
 
     private void RenderParty()
