@@ -9,7 +9,7 @@ A cross-platform fork of [PKHeX](https://github.com/kwsch/PKHeX), the Pokémon c
 
 Upstream PKHeX is a Windows Forms app, so it only runs on Windows. This fork keeps PKHeX's save-parsing and legality engine (`PKHeX.Core`) **unchanged**, ports the sprite/drawing layer from `System.Drawing` to [SkiaSharp](https://github.com/mono/SkiaSharp), and replaces the WinForms UI with a new [Avalonia](https://avaloniaui.net/) front-end that is being built screen by screen.
 
-> **Status: work in progress.** Box/party viewing, Pokémon editing and transfers work for every game PKHeX.Core supports. The per-game tool windows are at different stages: see the table below. Back up your saves before editing.
+> **Status: work in progress.** Box/party viewing, Pokémon editing and transfers work for every game PKHeX.Core supports. Per-game tool windows cover the games in the table below; more are being ported. Back up your saves before editing.
 
 ## Features
 
@@ -22,12 +22,12 @@ Upstream PKHeX is a Windows Forms app, so it only runs on Windows. This fork kee
 
 | Games | Tools | Status |
 |---|---|---|
-| HeartGold / SoulSilver | Pokéathlon: points, Data Cards, Athlete Shop, medals, courses, best scores, counters, event records | ⚠️ Untested |
-| Black / White, Black 2 / White 2 | Join Avenue (BW2), Memory Link, Global Link / Dream World, Entralink & Entrée Forest | ✅ Verified on a real save |
-| X / Y, Omega Ruby / Alpha Sapphire | Trainer, Poké Puffs, O-Powers, Super Training, Pokémon Link, Hall of Fame | ⚠️ Untested |
-| Let's Go, Pikachu! / Eevee! | Trainer info; Let's Go-aware boxes and party (packed storage, party-backed slots) | ⚠️ Untested |
+| HeartGold / SoulSilver | Pokéathlon: points, Data Cards, Athlete Shop, medals, courses, best scores, counters, event records | ✅ Tested |
+| Black / White, Black 2 / White 2 | Join Avenue (BW2), Memory Link, Global Link / Dream World, Entralink & Entrée Forest | ✅ Tested |
+| X / Y, Omega Ruby / Alpha Sapphire | Trainer, Poké Puffs, O-Powers, Super Training, Pokémon Link, Hall of Fame | ✅ Tested |
+| Let's Go, Pikachu! / Eevee! | Trainer info; Let's Go-aware boxes and party (packed storage, party-backed slots) | ✅ Tested |
 
-"Untested" means the code is written but hasn't yet been built and checked on a real save, so expect rough edges.
+"Tested" means it builds and has been checked end to end on real saves. Still, back up your saves before editing.
 
 Not ported yet: the remaining WinForms screens (other games' save editors, Mystery Gift database, Showdown/QR import, batch editor, etc.). Use upstream PKHeX on Windows for those.
 

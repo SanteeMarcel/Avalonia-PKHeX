@@ -58,7 +58,7 @@ Core + (ported) drawing layer.
   name leaves that field unchanged. Built code-behind with named XAML controls (reuses the `Opt`
   combo record from `Gen5Forms.cs`). All edit writes funnel through one `WriteControlsToPk()` used by
   both Re-check and Apply.
-- **Day Care / Nursery** ⚠️ (written, **not yet compiled**) `SavePanel` renders a third slot row
+- **Day Care / Nursery** ✅ (built + tested) `SavePanel` renders a third slot row
   ("Nursery" on Gen 7+, "Day Care" below that) between the party row and the box grid. Driven by
   `Sav is IDaycareStorage` so it lights up for **every** generation that implements it (Gen 1–8,
   incl. SM/USUM via `SAV7`), and the whole `NurseryPanel` collapses when the save has no daycare
@@ -110,7 +110,7 @@ Core + (ported) drawing layer.
   original byte. Remaining minor deviations from WinForms: the records/trivia/activities/shop-count and
   activity-dates arrays still use comma-separated text fields.
 
-- **Gen 4 tools / Pokéathlon** ⚠️ (written, **not yet compiled or run against a save**) A `Gen4 Tools`
+- **Gen 4 tools / Pokéathlon** ✅ (built + tested e2e) A `Gen4 Tools`
   button appears on a `SavePanel` when `Sav is SAV4HGSS` (Pokéathlon is HG/SS only — DP/Pt have no
   such block), labelled "🛠 HG/SS Tools", and opens `Gen4ToolsWindow`, covering the whole `Pokeathlon4` block
   (`SAV4HGSS.Pokeathlon`, 0xD9D4, 0xB80). Same shape as the Gen 5/6 windows: live in-memory edits,
@@ -143,7 +143,7 @@ Core + (ported) drawing layer.
   the selected species, which `FieldForm` has no dependent-combo support for). The Aprijuice block
   (`Aprijuice4`) is **not** included — Core has the wrapper but `SAV4HGSS` exposes no accessor for it.
 
-- **Gen 6 tools** ⚠️ (written, **not yet compiled or run against a save**) An "🛠 XY/ORAS Tools"
+- **Gen 6 tools** ✅ (built + tested e2e) An "🛠 XY/ORAS Tools"
   button appears on a `SavePanel` when `Sav is SAV6`, and opens `Gen6ToolsWindow`. Follows the Gen 5
   pattern exactly: live in-memory edits, `FieldForm` field surfaces built in code-behind, one
   `_applyHooks` list flushed by Apply/Close, `ComboWheelGuard.Attach(this)`. Tabs:
@@ -175,7 +175,7 @@ Core + (ported) drawing layer.
   (Berry Field, Roamer, Friend Safari, accessory unlock, Pokédex) and ORAS-only (Secret Base,
   Pokéblocks) features are **not** included.
 
-- **Let's Go Pikachu/Eevee (`SAV7b`)** ⚠️ (written, **not yet compiled or run against a save**) Boxes,
+- **Let's Go Pikachu/Eevee (`SAV7b`)** ✅ (built + tested e2e) Boxes,
   party and a Trainer tool window. LGPE storage is unusual — 1000 slots stored as a **packed list**
   (Core pages it as 40 "boxes" × 25), **party-format data in the boxes**, and the party is 6 **pointers
   into box storage** (`PokeListHeader.PokeListInfo`; `HasParty` is false, but `PartyCount` /
@@ -206,7 +206,7 @@ Core + (ported) drawing layer.
     `SAV_Trainer7GG`**: map coordinates, GO Park import/export, title/fashion unlocks. Capture Records
     and the Pokédex editor aren't ported either.
 
-Deferred / not done: **compiling + testing the Gen 6 window** (see gotcha #7); sprite pixel-diff
+Deferred / not done: sprite pixel-diff
 verification vs a Windows build; CI; the remaining WinForms screens (other per-generation save
 editors, etc.).
 
@@ -342,21 +342,19 @@ Requires the .NET 10 SDK. `PKHeX.WinForms` cannot build on macOS/Linux — that'
 6. **`SpriteUtil` is a global singleton.** `SpriteUtil.Initialize(sav)` sets the active sprite
    builder. With two saves loaded, call `Initialize(thisSav)` at the START of each panel's render
    so sprites use the right builder. `SavePanel.RenderBox` already does this.
-7. **`Gen4ToolsWindow`, `Gen6ToolsWindow` and `LgpeToolsWindow` (+ the SAV7b changes in `SavePanel` /
-   `EditPokemonWindow` / `MainWindow`) have never been compiled.** For LGPE, verify on a real save:
-   transfer into box 2+ → save → reload (storage compaction), edit a party member, and that a party
-   member's box tile shows "(party n)". For Gen 4 specifically, all
+7. **Pokéathlon wrappers are structs, mostly.** (`Gen4ToolsWindow`, `Gen6ToolsWindow`, `LgpeToolsWindow`
+   and the SAV7b `SavePanel` changes now build and are tested end to end — re-run the LGPE checks
+   after touching storage code: transfer into box 2+ → save → reload, edit a party member, party
+   move-out refused.) For Gen 4 specifically, all
    the Pokéathlon block wrappers (`PokeathlonMedalManager4`, `PokeathlonCourseRecord4`,
    `PokeathlonEventData4`, `PokeathlonParticipant4`, `PokeathlonGlobalCounters4`, …) are plain
    `struct`s over a `Memory<byte>` — unlike Gen 6's `HallFame6Entity` ref structs they **can** be
    captured by a lambda and mutated through the copy, which is what every `FieldForm` row here does.
    The one exception is `SpeciesForm10`: it's a packed value, *not* a view over save memory, so those
-   rows read-modify-write the whole field (see `AddEntryRows`). Verify round-trips on a real HG *and*
-   SS save.
-8. **`Gen6ToolsWindow` has never been compiled.** It was written against Core by reading the source,
-   not by building — expect a tail of name/signature fixes on the first
-   `dotnet build PKHeX.Avalonia/PKHeX.Avalonia.csproj`, and verify round-trips (edit → save → reload)
-   on a real XY *and* ORAS save before trusting it.
+   rows read-modify-write the whole field (see `AddEntryRows`).
+8. **Code written without a compiler needs a build before it's trusted.** New windows have been drafted
+   against Core by reading the source; always `dotnet build PKHeX.Avalonia/PKHeX.Avalonia.csproj` and
+   round-trip (edit → save → reload) on a real save before marking a feature ✅.
 9. **Apply runs from an `async void` click handler.** `apply.Click += async (_, _) => …` in the tools
    windows means an exception escaping any `FieldForm.Save` hook is unhandled and kills the process.
    Setters that validate (notably `MyStatus6.GameSyncID`, which throws on both a wrong length and a
@@ -632,14 +630,12 @@ Transfer / legality:
   levels/powers + forest unlock settings + Unlock-All / Delete-All buttons + a 530-slot `ListBox`
   editor (Species/Move/Gender/Form/Animation). Crypto handled by Core (`Slots` getter decrypts;
   `SAV5.GetFinalData()` → `EndAccess()` re-encrypts on save).
-- **Gen 4 (HG/SS) Pokéathlon** ⚠️ **compile + test.** `Gen4ToolsWindow` covers the whole
-  `Pokeathlon4` block (7 tabs) but has never been built or run — see gotcha #7. After it's green on a
-  real HG/SS save, the obvious follow-ups are species sprites in the medal + participant editors,
+- **Gen 4 (HG/SS) Pokéathlon** ✅ — `Gen4ToolsWindow` covers the whole `Pokeathlon4` block (7 tabs).
+  Follow-ups: species sprites in the medal + participant editors,
   `FormConverter` name dropdowns in place of the numeric Form spinners, and the other HG/SS misc
   surfaces WinForms exposes in `SAV_Misc4` (Poké Walker, Battle Frontier, `Record4`, Underground).
-- **Gen 6 (XY/ORAS)** ⚠️ **compile + test.** `Gen6ToolsWindow` covers the six XY+ORAS-shared
-  features (Trainer, Poké Puffs, O-Powers, Super Training, Pokémon Link, Hall of Fame) but has never
-  been built or run — see gotcha #7. After it's green on a real save, the obvious follow-ups are:
+- **Gen 6 (XY/ORAS)** ✅ — `Gen6ToolsWindow` covers the six XY+ORAS-shared features (Trainer, Poké
+  Puffs, O-Powers, Super Training, Pokémon Link, Hall of Fame). Follow-ups:
   ORAS-only tabs (Secret Base — the biggest single WinForms form in Gen 6 — and Pokéblocks/berry
   randomize), XY-only tabs (Berry Field viewer, Roamer, Friend Safari + accessory unlocks), the
   `FormConverter` name dropdowns to replace the numeric Form spinners, the 200-record trainer-stat
