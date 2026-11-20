@@ -1,46 +1,73 @@
-PKHeX
-=====
-<div>
-  <span>English</span> / <a href=".github/README-es.md">Español</a> / <a href=".github/README-fr.md">Français</a> / <a href=".github/README-de.md">Deutsch</a> / <a href=".github/README-it.md">Italiano</a> / <a href=".github/README-ko.md">한국어</a> / <a href=".github/README-zh-Hant.md">繁體中文</a> / <a href=".github/README-zh-Hans.md">简体中文</a>
-</div>
+Avalonia PKHeX
+==============
 
 ![License](https://img.shields.io/badge/License-GPLv3-blue.svg)
+![Platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey.svg)
+![.NET](https://img.shields.io/badge/.NET-10-512BD4.svg)
 
-Pokémon core series save editor, programmed in [C#](https://en.wikipedia.org/wiki/C_Sharp_%28programming_language%29).
+A cross-platform fork of [PKHeX](https://github.com/kwsch/PKHeX), the Pokémon core series save editor, that runs **natively on macOS and Linux**.
 
-Supports the following files:
-* Save files ("main", \*.sav, \*.dsv, \*.dat, \*.gci, \*.bin)
-* GameCube Memory Card files (\*.raw, \*.bin) containing GC Pokémon savegames.
-* Individual Pokémon entity files (.pk\*, \*.ck3, \*.xk3, \*.pb7, \*.sk2, \*.bk4, \*.rk4)
-* Mystery Gift files (\*.pgt, \*.pcd, \*.pgf, .wc\*) including conversion to .pk\*
-* Importing GO Park entities (\*.gp1) including conversion to .pb7
-* Importing teams from Decrypted 3DS Battle Videos
-* Transferring from one generation to another, converting formats along the way.
+Upstream PKHeX is a Windows Forms app, so it only runs on Windows. This fork keeps PKHeX's save-parsing and legality engine (`PKHeX.Core`) **unchanged**, ports the sprite/drawing layer from `System.Drawing` to [SkiaSharp](https://github.com/mono/SkiaSharp), and replaces the WinForms UI with a new [Avalonia](https://avaloniaui.net/) front-end that is being built screen by screen.
 
-Data is displayed in a view which can be edited and saved.
-The interface can be translated with resource/external text files so that different languages can be supported.
+> **Status: work in progress.** Box/party viewing, Pokémon editing and transfers work for every game PKHeX.Core supports. The per-game tool windows are at different stages: see the table below. Back up your saves before editing.
 
-Pokémon Showdown sets and QR codes can be imported/exported to assist in sharing.
+## Features
+
+* **Open and save** any save file PKHeX.Core recognises (\*.sav, \*.dsv, \*.dat, \*.gci, \*.bin, …) using the native file picker.
+* **Boxes and party**: sprites, box wallpapers, and a legal/illegal badge on every slot.
+* **Pokémon editor** (double-click a slot): nickname, level, nature, ability, held item, moves with PP Ups, IVs and EVs (AVs on Let's Go), gender, form, ball, friendship, OT/trainer ID, met data and date, markings, ribbons, PID reroll, Make Shiny. It has a live legality report with a Re-check button.
+* **Two-save transfer**: load two saves side by side and copy or move Pokémon between them. Cross-generation conversion is handled by PKHeX.Core, and backward transfers that would produce illegal Pokémon are refused.
+* **Day Care / Nursery** viewer (read-only) for the games that have one, including nature (handy for Everstone breeding).
+* **Per-game tools**: a tools button appears automatically for the games that have one:
+
+| Games | Tools | Status |
+|---|---|---|
+| HeartGold / SoulSilver | Pokéathlon: points, Data Cards, Athlete Shop, medals, courses, best scores, counters, event records | ⚠️ Untested |
+| Black / White, Black 2 / White 2 | Join Avenue (BW2), Memory Link, Global Link / Dream World, Entralink & Entrée Forest | ✅ Verified on a real save |
+| X / Y, Omega Ruby / Alpha Sapphire | Trainer, Poké Puffs, O-Powers, Super Training, Pokémon Link, Hall of Fame | ⚠️ Untested |
+| Let's Go, Pikachu! / Eevee! | Trainer info; Let's Go-aware boxes and party (packed storage, party-backed slots) | ⚠️ Untested |
+
+"Untested" means the code is written but hasn't yet been built and checked on a real save, so expect rough edges.
+
+Not ported yet: the remaining WinForms screens (other games' save editors, Mystery Gift database, Showdown/QR import, batch editor, etc.). Use upstream PKHeX on Windows for those.
 
 PKHeX expects save files that are not encrypted with console-specific keys. Use a savedata manager to import and export savedata from the console ([Checkpoint](https://github.com/FlagBrew/Checkpoint), save_manager, [JKSM](https://github.com/J-D-K/JKSM), or SaveDataFiler).
 
 **We do not support or condone cheating at the expense of others. Do not use significantly hacked Pokémon in battle or in trades with those who are unaware hacked Pokémon are in use.**
 
-## Screenshots
+## Building and running
 
-![Main Window](https://i.imgur.com/pIHdoTp.png)
+Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
 
-## Building
+```bash
+# Run the app
+dotnet run --project PKHeX.Avalonia/PKHeX.Avalonia.csproj
 
-PKHeX is a Windows Forms application which requires [.NET 10](https://dotnet.microsoft.com/download/dotnet/10.0).
+# Core test suite
+dotnet test Tests/PKHeX.Core.Tests/PKHeX.Core.Tests.csproj
 
-The executable can be built with any compiler that supports C# 14.
+# Headless sprite-pipeline check (no UI): writes PNGs for a save's boxes
+dotnet run --project PKHeX.SpriteTest -- "/path/to/your.sav"
+```
 
-### Build Configurations
+Build individual projects rather than the whole solution: `PKHeX.slnx` still includes the original `PKHeX.WinForms` project, which only builds on Windows.
 
-Use the Debug or Release build configurations when building. There isn't any platform specific code to worry about!
+## Project layout
 
-## Dependencies
+| Project | What it is |
+|---|---|
+| `PKHeX.Core` | Upstream PKHeX's engine: save parsing, Pokémon data, legality, encryption. **Kept unmodified** so upstream updates merge cleanly. |
+| `PKHeX.Drawing`, `PKHeX.Drawing.PokeSprite`, `PKHeX.Drawing.Misc` | Sprite and image code, ported from `System.Drawing` to SkiaSharp. |
+| `PKHeX.Avalonia` | The new cross-platform UI. |
+| `PKHeX.SpriteTest` | Console harness for checking the drawing layer without the UI. |
+| `PKHeX.WinForms` | The original Windows UI, kept for reference and as the porting source. |
+| `Porting/` | Migration notes (`SYSTEM_DRAWING_TO_SKIASHARP.md`, `PORTING_NOTES.md`). |
+
+Contributor notes, including the porting gotchas and a PKHeX.Core API cheat-sheet, are in [`CLAUDE.md`](CLAUDE.md).
+
+## Credits
+
+All the hard work of save parsing and legality checking is [PKHeX](https://github.com/kwsch/PKHeX) by Kaphotics and its contributors. This fork only adds the cross-platform drawing layer and UI. Please report bugs in this port here, not upstream.
 
 PKHeX's QR code generation code is taken from [QRCoder](https://github.com/codebude/QRCoder), which is licensed under [the MIT license](https://github.com/codebude/QRCoder/blob/master/LICENSE.txt).
 
@@ -48,6 +75,8 @@ PKHeX's shiny sprite collection is taken from [pokesprite](https://github.com/ms
 
 PKHeX's Pokémon Legends: Arceus sprite collection is taken from the [National Pokédex - Icon Dex](https://www.deviantart.com/pikafan2000/art/National-Pokedex-Version-Delta-Icon-Dex-824897934) project and its abundance of collaborators and contributors.
 
-### IDE
+The UI is built with [Avalonia](https://github.com/AvaloniaUI/Avalonia) (MIT), and drawing uses [SkiaSharp](https://github.com/mono/SkiaSharp) (MIT).
 
-PKHeX can be opened with IDEs such as [Visual Studio](https://visualstudio.microsoft.com/downloads/) by opening the .sln or .csproj file.
+## License
+
+GPLv3, same as upstream PKHeX. See [LICENSE](LICENSE).
